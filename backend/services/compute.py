@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import pandas as pd
 import numpy as np
@@ -228,6 +228,18 @@ def _build_cohort_map(pivot: pd.DataFrame, periods: list[str]) -> dict:
     return cohort_map
 
 
+def _compute_attribute_options(raw_df: pd.DataFrame, attr_names: list[str]) -> list[dict]:
+    """Return list of {name, values} with unique sorted values per attribute."""
+    options = []
+    for name in attr_names:
+        if name in raw_df.columns:
+            vals = sorted(
+                v for v in raw_df[name].unique().tolist() if v and v != ""
+            )
+            options.append({"name": name, "values": vals})
+    return options
+
+
 def _build_attr_lookup(raw_df: pd.DataFrame, attr_names: list[str]) -> dict:
     """Return {customer_id: {attr_name: first_non_empty_value}}."""
     if not attr_names:
@@ -249,21 +261,22 @@ def _compute_overview(pivot: pd.DataFrame, periods: list[str],
                       derived: dict, yoy_offset: int,
                       scale_factor: int, period_date_map: dict,
                       cohort_map: dict, attr_lookup: dict,
-                      attr_names: list[str]) -> dict:
+                      attr_names: list[str], top_n: int = 10) -> dict:
     """Compute overview dashboard data."""
     sf = scale_factor
 
     # ARR over time (total per period)
     arr_over_time = [float(pivot[p].sum() / sf) for p in periods]
 
-    # ARR growth percentages period-over-period
-    arr_growth_pcts: list = [None]
-    for i in range(1, len(arr_over_time)):
-        prev = arr_over_time[i - 1]
-        if prev != 0:
-            arr_growth_pcts.append(round(arr_over_time[i] / prev - 1, 4))
-        else:
+    # ARR growth percentages — year-over-year (uses yoy_offset so quarterly/monthly
+    # compare the same period in the prior year, not the prior period)
+    arr_growth_pcts: list = []
+    for i in range(len(arr_over_time)):
+        if i < yoy_offset:
             arr_growth_pcts.append(None)
+        else:
+            prior = arr_over_time[i - yoy_offset]
+            arr_growth_pcts.append(round(arr_over_time[i] / prior - 1, 4) if prior != 0 else None)
 
     # Latest period info
     latest_period_label = periods[-1] if periods else ""
@@ -329,10 +342,10 @@ def _compute_overview(pivot: pd.DataFrame, periods: list[str],
         "punitive_retention_pct": round(punitive_retention_pct, 4) if punitive_retention_pct is not None else None,
     }
 
-    # Top 10 customers
+    # Top N customers
     latest_period = periods[-1]
     latest_arr = pivot[latest_period].copy()
-    top_custs = latest_arr.nlargest(10)
+    top_custs = latest_arr.nlargest(top_n)
     total_arr_raw = latest_arr.sum()
 
     top_customers = []
@@ -396,10 +409,17 @@ def _compute_cohort(pivot: pd.DataFrame, periods: list[str],
         cust_in_cohort = cohort_series[cohort_series == cohort_label].index
         cohort_pivot = pivot.loc[cust_in_cohort]
 
-        arr_values = [round(float(cohort_pivot[p].sum() / sf), 2) for p in periods]
-        cust_counts = [int((cohort_pivot[p] > 0).sum()) for p in periods]
-
         cohort_idx = periods.index(cohort_label)
+
+        # Pre-cohort periods return None; post-cohort 0s stay as 0 (all churned)
+        arr_values = [
+            None if i < cohort_idx else round(float(cohort_pivot[p].sum() / sf), 2)
+            for i, p in enumerate(periods)
+        ]
+        cust_counts = [
+            None if i < cohort_idx else int((cohort_pivot[p] > 0).sum())
+            for i, p in enumerate(periods)
+        ]
         starting_arr = cohort_pivot[cohort_label].sum()
         starting_count = (cohort_pivot[cohort_label] > 0).sum()
 
@@ -434,9 +454,14 @@ def _compute_cohort(pivot: pd.DataFrame, periods: list[str],
 
 
 def compute_dashboard(session_dir: str, filepath: str,
-                      granularity: str | None = None) -> dict:
+                      granularity: str | None = None,
+                      filters: Optional[Dict[str, str]] = None,
+                      top_n: int = 10) -> dict:
     """
     Main entry point: compute all dashboard data for a session.
+
+    filters: dict of {attribute_display_name: value} to filter raw data.
+    top_n: number of top customers to return in overview.
     """
     config = load_config(session_dir)
     raw_df = _read_raw_data(filepath, config)
@@ -444,6 +469,15 @@ def compute_dashboard(session_dir: str, filepath: str,
     scale_factor = config["scale_factor"]
     output_grans = config["output_granularities"]
     attr_names = list(config.get("attributes", {}).keys())
+
+    # Compute attribute options from unfiltered data so dropdowns always show all values
+    attribute_options = _compute_attribute_options(raw_df, attr_names)
+
+    # Apply attribute filters
+    if filters:
+        for attr_name, attr_value in filters.items():
+            if attr_name in raw_df.columns and attr_value:
+                raw_df = raw_df[raw_df[attr_name] == attr_value]
 
     # Determine which granularity to use
     if granularity and granularity in output_grans:
@@ -466,7 +500,7 @@ def compute_dashboard(session_dir: str, filepath: str,
 
     overview = _compute_overview(
         pivot, periods, derived, yoy_offset, scale_factor,
-        period_date_map, cohort_map, attr_lookup, attr_names
+        period_date_map, cohort_map, attr_lookup, attr_names, top_n
     )
     cohort = _compute_cohort(pivot, periods, scale_factor, cohort_map)
 
@@ -476,4 +510,5 @@ def compute_dashboard(session_dir: str, filepath: str,
         "granularity": target_gran,
         "available_granularities": available,
         "scale_factor": scale_factor,
+        "attribute_options": attribute_options,
     }

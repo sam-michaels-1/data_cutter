@@ -52,8 +52,8 @@ class CohortEntry(BaseModel):
     label: str
     count: int
     starting_arr: float
-    arr: List[float]
-    customers: List[int]
+    arr: List[Optional[float]]
+    customers: List[Optional[int]]
     ndr: List[Optional[float]]
     logo_retention: List[Optional[float]]
 
@@ -63,9 +63,15 @@ class CohortData(BaseModel):
     cohorts: List[CohortEntry]
 
 
+class AttributeOption(BaseModel):
+    name: str
+    values: List[str]
+
+
 class DashboardResponse(BaseModel):
     overview: OverviewData
     cohort: CohortData
     granularity: str
     available_granularities: List[str]
     scale_factor: int
+    attribute_options: List[AttributeOption]

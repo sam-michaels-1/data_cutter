@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
 import CohortHeatmap from "../components/dashboard/CohortHeatmap";
+import AttributeFilterBar from "../components/AttributeFilterBar";
 import type { CohortMetric } from "../types/dashboard";
 
 const METRICS: { key: CohortMetric; label: string }[] = [
@@ -15,6 +16,16 @@ export default function CohortPage() {
   const { sessionId } = useSession();
   const { data, loading, error, refetch } = useDashboard(sessionId);
   const [metric, setMetric] = useState<CohortMetric>("arr");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const handleGranularityChange = (g: string) => {
+    refetch(g, { filters });
+  };
+
+  const handleFilterChange = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
+    refetch(data?.granularity, { filters: newFilters });
+  };
 
   if (!sessionId) {
     return (
@@ -56,7 +67,7 @@ export default function CohortPage() {
 
   if (!data) return null;
 
-  const { cohort, granularity, available_granularities, scale_factor } = data;
+  const { cohort, granularity, available_granularities, scale_factor, attribute_options } = data;
 
   const title =
     metric === "arr"
@@ -100,7 +111,7 @@ export default function CohortPage() {
             {available_granularities.map((g) => (
               <button
                 key={g}
-                onClick={() => refetch(g)}
+                onClick={() => handleGranularityChange(g)}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition ${
                   g === granularity
                     ? "bg-teal-600 text-white shadow"
@@ -114,11 +125,20 @@ export default function CohortPage() {
         )}
       </div>
 
+      {/* Attribute filters */}
+      {attribute_options.length > 0 && (
+        <AttributeFilterBar
+          attributes={attribute_options}
+          filters={filters}
+          onChange={handleFilterChange}
+        />
+      )}
+
       <div className="bg-white border border-gray-200 rounded-xl p-4">
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
           {title}
         </h3>
-        <CohortHeatmap cohort={cohort} metric={metric} scaleFactor={scale_factor} />
+        <CohortHeatmap cohort={cohort} metric={metric} scaleFactor={scale_factor} granularity={granularity} />
       </div>
     </div>
   );

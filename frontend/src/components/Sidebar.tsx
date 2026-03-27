@@ -13,7 +13,7 @@ const NAV_SECTIONS = [
     items: [
       { to: "/dashboard", label: "Dashboard", icon: ChartIcon },
       { to: "/cohort", label: "Cohort Analysis", icon: GridIcon },
-      { to: "/customers", label: "Customers", icon: UsersIcon },
+      { to: "/customers", label: "Top Customers", icon: UsersIcon },
     ],
   },
   {

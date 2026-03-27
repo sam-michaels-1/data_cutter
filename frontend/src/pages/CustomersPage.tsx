@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
+import AttributeFilterBar from "../components/AttributeFilterBar";
 import { formatCurrency } from "../utils/format";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -10,9 +12,27 @@ const STATUS_STYLES: Record<string, string> = {
   New: "text-blue-700 bg-blue-100",
 };
 
+const TOP_N_OPTIONS = [10, 15, 25, 50];
+
 export default function CustomersPage() {
   const { sessionId } = useSession();
   const { data, loading, error, refetch } = useDashboard(sessionId);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [topN, setTopN] = useState(10);
+
+  const handleGranularityChange = (g: string) => {
+    refetch(g, { filters, topN });
+  };
+
+  const handleFilterChange = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
+    refetch(data?.granularity, { filters: newFilters, topN });
+  };
+
+  const handleTopNChange = (n: number) => {
+    setTopN(n);
+    refetch(data?.granularity, { filters, topN: n });
+  };
 
   if (!sessionId) {
     return (
@@ -58,15 +78,65 @@ export default function CustomersPage() {
   const periods = data.overview.periods;
   const scaleFactor = data.scale_factor;
   const attrKeys = customers.length > 0 ? Object.keys(customers[0].attributes) : [];
+  const { granularity, available_granularities, attribute_options } = data;
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px]">
-      <div>
-        <h1 className="text-xl font-bold">Customer Ranking</h1>
-        <p className="text-sm text-gray-500">
-          Top customers ranked by latest period ARR
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold">Customer Ranking</h1>
+          <p className="text-sm text-gray-500">
+            Top customers ranked by latest period ARR
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Top-N selector */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+            {TOP_N_OPTIONS.map((n) => (
+              <button
+                key={n}
+                onClick={() => handleTopNChange(n)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                  n === topN
+                    ? "bg-teal-600 text-white shadow"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Top {n}
+              </button>
+            ))}
+          </div>
+
+          {/* Granularity toggle */}
+          {available_granularities.length > 1 && (
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+              {available_granularities.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => handleGranularityChange(g)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                    g === granularity
+                      ? "bg-teal-600 text-white shadow"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Attribute filters */}
+      {attribute_options.length > 0 && (
+        <AttributeFilterBar
+          attributes={attribute_options}
+          filters={filters}
+          onChange={handleFilterChange}
+        />
+      )}
 
       <div className="bg-white border border-gray-200 rounded-xl p-4">
         <div className="overflow-x-auto">

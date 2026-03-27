@@ -1,13 +1,25 @@
+import { useState } from "react";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
 import StatsCards from "../components/dashboard/StatsCards";
 import ARRBarChart from "../components/dashboard/ARRBarChart";
 import WaterfallChart from "../components/dashboard/WaterfallChart";
 import TopCustomersTable from "../components/dashboard/TopCustomersTable";
+import AttributeFilterBar from "../components/AttributeFilterBar";
 
 export default function DashboardPage() {
   const { sessionId } = useSession();
   const { data, loading, error, refetch } = useDashboard(sessionId);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const handleGranularityChange = (g: string) => {
+    refetch(g, { filters });
+  };
+
+  const handleFilterChange = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
+    refetch(data?.granularity, { filters: newFilters });
+  };
 
   if (!sessionId) {
     return (
@@ -52,7 +64,7 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { overview, granularity, available_granularities, scale_factor } = data;
+  const { overview, granularity, available_granularities, scale_factor, attribute_options } = data;
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px]">
@@ -60,15 +72,15 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
         {available_granularities.length > 1 && (
-          <div className="flex gap-1 bg-gray-100 bg-gray-100 rounded-lg p-0.5">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {available_granularities.map((g) => (
               <button
                 key={g}
-                onClick={() => refetch(g)}
+                onClick={() => handleGranularityChange(g)}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition ${
                   g === granularity
                     ? "bg-teal-600 text-white shadow"
-                    : "text-gray-500 text-gray-500 hover:text-gray-700 hover:text-gray-700"
+                    : "text-gray-500 hover:text-gray-700"
                 }`}
               >
                 {g.charAt(0).toUpperCase() + g.slice(1)}
@@ -77,6 +89,15 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Attribute filters */}
+      {attribute_options.length > 0 && (
+        <AttributeFilterBar
+          attributes={attribute_options}
+          filters={filters}
+          onChange={handleFilterChange}
+        />
+      )}
 
       {/* Stats cards (includes "as of" label) */}
       <StatsCards

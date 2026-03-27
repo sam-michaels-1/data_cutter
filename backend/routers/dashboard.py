@@ -6,7 +6,9 @@ GET /api/dashboard/{session_id}  — compute and return dashboard metrics
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+from functools import partial
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -19,7 +21,12 @@ router = APIRouter(prefix="/api")
 
 
 @router.get("/dashboard/{session_id}", response_model=DashboardResponse)
-async def dashboard(session_id: str, granularity: Optional[str] = Query(None)):
+async def dashboard(
+    session_id: str,
+    granularity: Optional[str] = Query(None),
+    filters: Optional[str] = Query(None),  # JSON-encoded dict e.g. '{"Customer Type":"Software"}'
+    top_n: int = Query(10, ge=1, le=200),
+):
     """Compute dashboard metrics for a given session."""
     if not session_exists(session_id):
         raise HTTPException(404, "Session not found.")
@@ -33,10 +40,17 @@ async def dashboard(session_id: str, granularity: Optional[str] = Query(None)):
     if not os.path.isfile(filepath):
         raise HTTPException(404, "Uploaded file not found.")
 
+    parsed_filters = None
+    if filters:
+        try:
+            parsed_filters = json.loads(filters)
+        except json.JSONDecodeError:
+            raise HTTPException(400, "Invalid filters parameter — must be a JSON object.")
+
     loop = asyncio.get_event_loop()
     try:
-        result = await loop.run_in_executor(
-            None, compute_dashboard, session_dir, filepath, granularity)
+        fn = partial(compute_dashboard, session_dir, filepath, granularity, parsed_filters, top_n)
+        result = await loop.run_in_executor(None, fn)
     except Exception as e:
         raise HTTPException(500, f"Dashboard computation failed: {e}")
 

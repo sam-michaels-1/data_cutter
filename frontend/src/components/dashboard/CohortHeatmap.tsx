@@ -5,6 +5,7 @@ interface Props {
   cohort: CohortData;
   metric: CohortMetric;
   scaleFactor: number;
+  granularity: string;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -13,8 +14,8 @@ function getMetricValues(c: CohortEntry, metric: CohortMetric): (number | null)[
   switch (metric) {
     case "ndr": return c.ndr;
     case "logo_retention": return c.logo_retention;
-    case "arr": return c.arr.map((v) => (v === 0 ? null : v));
-    case "customers": return c.customers.map((v) => (v === 0 ? null : v));
+    case "arr": return c.arr;
+    case "customers": return c.customers;
   }
 }
 
@@ -48,15 +49,21 @@ function formatValue(value: number | null, metric: CohortMetric, scaleFactor: nu
     return `${(value * 100).toFixed(0)}%`;
   }
   if (metric === "arr") {
-    return formatCurrency(value, scaleFactor);
+    return value === 0 ? "$0" : formatCurrency(value, scaleFactor);
   }
   // customers
-  return value.toLocaleString();
+  return value === 0 ? "0" : value.toLocaleString();
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function CohortHeatmap({ cohort, metric, scaleFactor }: Props) {
+const PERIOD_PREFIX: Record<string, string> = {
+  annual: "Y",
+  quarterly: "Q",
+  monthly: "M",
+};
+
+export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity }: Props) {
   const { cohorts } = cohort;
 
   if (cohorts.length === 0) {
@@ -71,7 +78,8 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor }: Props) {
 
   // Max number of relative periods across all cohorts
   const maxCols = Math.max(...aligned.map((a) => a.shifted.length));
-  const headers = Array.from({ length: maxCols }, (_, i) => `Y${i}`);
+  const prefix = PERIOD_PREFIX[granularity] ?? "Y";
+  const headers = Array.from({ length: maxCols }, (_, i) => `${prefix}${i}`);
 
   // Summary rows: per column across cohorts
   const avgRow: (number | null)[] = [];

@@ -44,8 +44,8 @@ export interface CohortEntry {
   label: string;
   count: number;
   starting_arr: number;
-  arr: number[];
-  customers: number[];
+  arr: (number | null)[];
+  customers: (number | null)[];
   ndr: (number | null)[];
   logo_retention: (number | null)[];
 }
@@ -55,12 +55,18 @@ export interface CohortData {
   cohorts: CohortEntry[];
 }
 
+export interface AttributeOption {
+  name: string;
+  values: string[];
+}
+
 export interface DashboardResponse {
   overview: OverviewData;
   cohort: CohortData;
   granularity: string;
   available_granularities: string[];
   scale_factor: number;
+  attribute_options: AttributeOption[];
 }
 
 export type CohortMetric = "ndr" | "arr" | "logo_retention" | "customers";

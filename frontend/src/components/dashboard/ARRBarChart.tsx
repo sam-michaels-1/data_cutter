@@ -17,7 +17,20 @@ interface Props {
   scaleFactor: number;
 }
 
-// Custom XAxis tick that renders period label + growth % below it
+/**
+ * Returns true if this period is the last one of its fiscal year
+ * (i.e. the next period has a different 'YY suffix, or it's the last period).
+ * Annual periods always show. For quarterly/monthly this trims to year-end only.
+ */
+function isYearEnd(periods: string[], idx: number): boolean {
+  if (periods.length <= 6) return true; // few enough to show all (annual)
+  if (idx === periods.length - 1) return true;
+  const currYear = periods[idx].match(/'(\d{2})$/)?.[1];
+  const nextYear = periods[idx + 1].match(/'(\d{2})$/)?.[1];
+  return currYear !== nextYear;
+}
+
+// Custom XAxis tick — shows label + growth % only at year-end periods
 function CustomTick({ x, y, payload, growthPcts, periods }: {
   x?: number;
   y?: number;
@@ -26,7 +39,9 @@ function CustomTick({ x, y, payload, growthPcts, periods }: {
   periods: string[];
 }) {
   const idx = periods.indexOf(payload?.value ?? "");
-  const growth = idx >= 0 ? growthPcts[idx] : null;
+  if (idx < 0 || !isYearEnd(periods, idx)) return <g />;
+
+  const growth = growthPcts[idx];
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -43,7 +58,7 @@ function CustomTick({ x, y, payload, growthPcts, periods }: {
           fontSize={9}
           fontWeight={500}
         >
-          {growth >= 0 ? "+" : ""}{(growth * 100).toFixed(1)}%
+          {growth >= 0 ? "+" : ""}{(growth * 100).toFixed(0)}%
         </text>
       )}
     </g>
