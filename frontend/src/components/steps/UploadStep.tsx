@@ -15,16 +15,17 @@ export default function UploadStep({ state, dispatch }: Props) {
       dispatch({ type: "SET_LOADING", loading: true });
       try {
         const res = await uploadFile(file);
+        const sheets = res.sheet_names ?? [];
         dispatch({
           type: "UPLOAD_SUCCESS",
           sessionId: res.session_id,
           filename: res.filename,
-          sheetNames: res.sheet_names,
+          sheetNames: sheets,
         });
         // Auto-select if only one sheet
-        if (res.sheet_names.length === 1) {
-          dispatch({ type: "SET_SHEET", sheet: res.sheet_names[0] });
-          await handleDetect(res.session_id, res.sheet_names[0]);
+        if (sheets.length === 1) {
+          dispatch({ type: "SET_SHEET", sheet: sheets[0] });
+          await handleDetect(res.session_id, sheets[0]);
         }
       } catch (err: any) {
         dispatch({
@@ -87,7 +88,7 @@ export default function UploadStep({ state, dispatch }: Props) {
       />
 
       {/* Sheet picker */}
-      {state.sheetNames.length > 1 && (
+      {state.sheetNames?.length > 1 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Which sheet contains the raw data?
@@ -110,7 +111,7 @@ export default function UploadStep({ state, dispatch }: Props) {
       )}
 
       {/* Column mapping */}
-      {state.confirmedMapping && state.columns.length > 0 && (
+      {state.confirmedMapping && state.columns?.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-gray-700 mb-2">
             Detected Column Mapping

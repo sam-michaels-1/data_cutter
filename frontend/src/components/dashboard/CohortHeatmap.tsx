@@ -67,7 +67,7 @@ const PERIOD_PREFIX: Record<string, string> = {
 export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity, metricLabel = "ARR" }: Props) {
   const { cohorts } = cohort;
 
-  if (cohorts.length === 0) {
+  if (!cohorts?.length) {
     return <div className="text-center text-gray-500 py-8">No cohort data available.</div>;
   }
 

@@ -72,7 +72,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-        {available_granularities.length > 1 && (
+        {available_granularities?.length > 1 && (
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {available_granularities.map((g) => (
               <button
@@ -92,7 +92,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Attribute filters */}
-      {attribute_options.length > 0 && (
+      {attribute_options?.length > 0 && (
         <AttributeFilterBar
           attributes={attribute_options}
           filters={filters}
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Top customers */}
-      {overview.top_customers.length > 0 && (
+      {overview.top_customers?.length > 0 && (
         <TopCustomersTable
           customers={overview.top_customers}
           scaleFactor={scale_factor}

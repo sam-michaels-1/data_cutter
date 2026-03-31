@@ -77,7 +77,7 @@ export default function CustomersPage() {
   const customers = data.overview.top_customers;
   const periods = data.overview.periods;
   const scaleFactor = data.scale_factor;
-  const attrKeys = customers.length > 0 ? Object.keys(customers[0].attributes) : [];
+  const attrKeys = customers?.length > 0 ? Object.keys(customers[0].attributes) : [];
   const { granularity, available_granularities, attribute_options } = data;
 
   return (
@@ -109,7 +109,7 @@ export default function CustomersPage() {
           </div>
 
           {/* Granularity toggle */}
-          {available_granularities.length > 1 && (
+          {available_granularities?.length > 1 && (
             <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
               {available_granularities.map((g) => (
                 <button
@@ -130,7 +130,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Attribute filters */}
-      {attribute_options.length > 0 && (
+      {attribute_options?.length > 0 && (
         <AttributeFilterBar
           attributes={attribute_options}
           filters={filters}

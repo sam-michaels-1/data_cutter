@@ -23,7 +23,7 @@ interface Props {
  * Annual periods always show. For quarterly/monthly this trims to year-end only.
  */
 function isYearEnd(periods: string[], idx: number): boolean {
-  if (periods.length <= 6) return true; // few enough to show all (annual)
+  if (!periods?.length || periods.length <= 6) return true; // few enough to show all (annual)
   if (idx === periods.length - 1) return true;
   const currYear = periods[idx].match(/'(\d{2})$/)?.[1];
   const nextYear = periods[idx + 1].match(/'(\d{2})$/)?.[1];

@@ -109,7 +109,7 @@ export default function CohortPage() {
         </div>
 
         {/* Granularity toggle */}
-        {available_granularities.length > 1 && (
+        {available_granularities?.length > 1 && (
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {available_granularities.map((g) => (
               <button
@@ -129,7 +129,7 @@ export default function CohortPage() {
       </div>
 
       {/* Attribute filters */}
-      {attribute_options.length > 0 && (
+      {attribute_options?.length > 0 && (
         <AttributeFilterBar
           attributes={attribute_options}
           filters={filters}
