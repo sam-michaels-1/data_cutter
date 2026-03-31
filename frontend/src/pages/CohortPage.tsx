@@ -5,8 +5,8 @@ import CohortHeatmap from "../components/dashboard/CohortHeatmap";
 import AttributeFilterBar from "../components/AttributeFilterBar";
 import type { CohortMetric } from "../types/dashboard";
 
-const METRICS: { key: CohortMetric; label: string }[] = [
-  { key: "arr", label: "ARR" },
+const BASE_METRICS: { key: CohortMetric; label: string }[] = [
+  { key: "arr", label: "{metric}" },
   { key: "ndr", label: "Dollar Retention" },
   { key: "customers", label: "Customers" },
   { key: "logo_retention", label: "Logo Retention" },
@@ -67,11 +67,12 @@ export default function CohortPage() {
 
   if (!data) return null;
 
-  const { cohort, granularity, available_granularities, scale_factor, attribute_options } = data;
+  const { cohort, granularity, available_granularities, scale_factor, attribute_options, data_type } = data;
+  const metricLabel = data_type === "revenue" ? "Revenue" : "ARR";
 
   const title =
     metric === "arr"
-      ? "ARR by Cohort"
+      ? `${metricLabel} by Cohort`
       : metric === "ndr"
       ? "Net Dollar Retention (%)"
       : metric === "logo_retention"
@@ -90,7 +91,9 @@ export default function CohortPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         {/* Metric toggle */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
-          {METRICS.map(({ key, label }) => (
+          {BASE_METRICS.map(({ key, label: rawLabel }) => {
+          const label = rawLabel.replace("{metric}", metricLabel);
+          return (
             <button
               key={key}
               onClick={() => setMetric(key)}
@@ -102,7 +105,7 @@ export default function CohortPage() {
             >
               {label}
             </button>
-          ))}
+          );})}
         </div>
 
         {/* Granularity toggle */}
@@ -138,7 +141,7 @@ export default function CohortPage() {
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
           {title}
         </h3>
-        <CohortHeatmap cohort={cohort} metric={metric} scaleFactor={scale_factor} granularity={granularity} />
+        <CohortHeatmap cohort={cohort} metric={metric} scaleFactor={scale_factor} granularity={granularity} metricLabel={metricLabel} />
       </div>
     </div>
   );

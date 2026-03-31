@@ -95,7 +95,7 @@ def _assign_fiscal_period(date: datetime.date, fy_month: int) -> tuple[int, int]
 
 
 def _aggregate_to_granularity(df: pd.DataFrame, granularity: str,
-                               fy_month: int) -> tuple[pd.DataFrame, dict]:
+                               fy_month: int, data_type: str = "arr") -> tuple[pd.DataFrame, dict]:
     """
     Aggregate raw data to the requested granularity.
     Returns:
@@ -110,40 +110,64 @@ def _aggregate_to_granularity(df: pd.DataFrame, granularity: str,
     df["fy_quarter"] = fy_data.apply(lambda x: x[1])
 
     if granularity == "annual":
-        # Only use records at the fiscal year-end month (ARR is a point-in-time
-        # snapshot, not cumulative — summing interim months would inflate values).
-        at_fy_end = df["date"].apply(lambda d: d.month == fy_month)
-        valid_years = set(df[at_fy_end]["fy_year"].tolist())
-        df_filtered = df[at_fy_end & df["fy_year"].isin(valid_years)]
-        grouped = df_filtered.groupby(["customer_id", "fy_year"])["arr"].sum().reset_index()
-        grouped["period_label"] = grouped["fy_year"].apply(lambda y: f"FY'{y % 100:02d}")
-        grouped["period_sort"] = grouped["fy_year"]
-        # Build period -> max date map
-        date_map = (df_filtered.groupby("fy_year")["date"].max()
-                    .reset_index()
-                    .assign(period_label=lambda x: x["fy_year"].apply(lambda y: f"FY'{y % 100:02d}"))
-                    .set_index("period_label")["date"]
-                    .apply(lambda d: d.isoformat())
-                    .to_dict())
+        if data_type == "revenue":
+            # Revenue: sum ALL months in the fiscal year (cumulative).
+            grouped = df.groupby(["customer_id", "fy_year"])["arr"].sum().reset_index()
+            grouped["period_label"] = grouped["fy_year"].apply(lambda y: f"FY'{y % 100:02d}")
+            grouped["period_sort"] = grouped["fy_year"]
+            date_map = (df.groupby("fy_year")["date"].max()
+                        .reset_index()
+                        .assign(period_label=lambda x: x["fy_year"].apply(lambda y: f"FY'{y % 100:02d}"))
+                        .set_index("period_label")["date"]
+                        .apply(lambda d: d.isoformat())
+                        .to_dict())
+        else:
+            # ARR: only use records at the fiscal year-end month (point-in-time
+            # snapshot — summing interim months would inflate values).
+            at_fy_end = df["date"].apply(lambda d: d.month == fy_month)
+            valid_years = set(df[at_fy_end]["fy_year"].tolist())
+            df_filtered = df[at_fy_end & df["fy_year"].isin(valid_years)]
+            grouped = df_filtered.groupby(["customer_id", "fy_year"])["arr"].sum().reset_index()
+            grouped["period_label"] = grouped["fy_year"].apply(lambda y: f"FY'{y % 100:02d}")
+            grouped["period_sort"] = grouped["fy_year"]
+            date_map = (df_filtered.groupby("fy_year")["date"].max()
+                        .reset_index()
+                        .assign(period_label=lambda x: x["fy_year"].apply(lambda y: f"FY'{y % 100:02d}"))
+                        .set_index("period_label")["date"]
+                        .apply(lambda d: d.isoformat())
+                        .to_dict())
         return grouped[["customer_id", "period_label", "period_sort", "arr"]], date_map
 
     elif granularity == "quarterly":
-        # Only use records at the fiscal quarter-end month.
-        df = df.copy()
-        df["at_qend"] = df["date"].apply(lambda d: (fy_month - d.month) % 3 == 0)
-        valid_qkeys = (df[df["at_qend"]][["fy_year", "fy_quarter"]]
-                       .drop_duplicates())
-        df_filtered = df[df["at_qend"]].merge(valid_qkeys, on=["fy_year", "fy_quarter"])
-        grouped = df_filtered.groupby(["customer_id", "fy_year", "fy_quarter"])["arr"].sum().reset_index()
-        grouped["period_label"] = grouped.apply(
-            lambda r: f"Q{int(r['fy_quarter'])}'{int(r['fy_year']) % 100:02d}", axis=1)
-        grouped["period_sort"] = grouped["fy_year"] * 10 + grouped["fy_quarter"]
-        date_map = (df_filtered.assign(
-            period_label=lambda x: x.apply(
-                lambda r: f"Q{int(r['fy_quarter'])}'{int(r['fy_year']) % 100:02d}", axis=1))
-            .groupby("period_label")["date"].max()
-            .apply(lambda d: d.isoformat())
-            .to_dict())
+        if data_type == "revenue":
+            # Revenue: sum ALL months in the fiscal quarter (cumulative).
+            grouped = df.groupby(["customer_id", "fy_year", "fy_quarter"])["arr"].sum().reset_index()
+            grouped["period_label"] = grouped.apply(
+                lambda r: f"Q{int(r['fy_quarter'])}'{int(r['fy_year']) % 100:02d}", axis=1)
+            grouped["period_sort"] = grouped["fy_year"] * 10 + grouped["fy_quarter"]
+            date_map = (df.assign(
+                period_label=lambda x: x.apply(
+                    lambda r: f"Q{int(r['fy_quarter'])}'{int(r['fy_year']) % 100:02d}", axis=1))
+                .groupby("period_label")["date"].max()
+                .apply(lambda d: d.isoformat())
+                .to_dict())
+        else:
+            # ARR: only use records at the fiscal quarter-end month.
+            df = df.copy()
+            df["at_qend"] = df["date"].apply(lambda d: (fy_month - d.month) % 3 == 0)
+            valid_qkeys = (df[df["at_qend"]][["fy_year", "fy_quarter"]]
+                           .drop_duplicates())
+            df_filtered = df[df["at_qend"]].merge(valid_qkeys, on=["fy_year", "fy_quarter"])
+            grouped = df_filtered.groupby(["customer_id", "fy_year", "fy_quarter"])["arr"].sum().reset_index()
+            grouped["period_label"] = grouped.apply(
+                lambda r: f"Q{int(r['fy_quarter'])}'{int(r['fy_year']) % 100:02d}", axis=1)
+            grouped["period_sort"] = grouped["fy_year"] * 10 + grouped["fy_quarter"]
+            date_map = (df_filtered.assign(
+                period_label=lambda x: x.apply(
+                    lambda r: f"Q{int(r['fy_quarter'])}'{int(r['fy_year']) % 100:02d}", axis=1))
+                .groupby("period_label")["date"].max()
+                .apply(lambda d: d.isoformat())
+                .to_dict())
         return grouped[["customer_id", "period_label", "period_sort", "arr"]], date_map
 
     else:  # monthly
@@ -489,7 +513,8 @@ def compute_dashboard(session_dir: str, filepath: str,
     available = [g for g in ["annual", "quarterly", "monthly"] if g in output_grans]
 
     # Aggregate raw data to target granularity
-    agg_df, period_date_map = _aggregate_to_granularity(raw_df, target_gran, fy_month)
+    data_type = config.get("data_type", "arr")
+    agg_df, period_date_map = _aggregate_to_granularity(raw_df, target_gran, fy_month, data_type)
     pivot, periods = _build_arr_matrix(agg_df)
     yoy_offset = _get_yoy_offset(target_gran)
     derived = _compute_derived(pivot, periods, yoy_offset)
@@ -511,4 +536,5 @@ def compute_dashboard(session_dir: str, filepath: str,
         "available_granularities": available,
         "scale_factor": scale_factor,
         "attribute_options": attribute_options,
+        "data_type": data_type,
     }

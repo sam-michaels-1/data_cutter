@@ -75,3 +75,4 @@ class DashboardResponse(BaseModel):
     available_granularities: List[str]
     scale_factor: int
     attribute_options: List[AttributeOption]
+    data_type: str = "arr"

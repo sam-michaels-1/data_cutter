@@ -128,4 +128,5 @@ def build_engine_config(
         "fiscal_year_end_month": fiscal_year_end_month,
         "scale_factor": scale_factor,
         "filter_breakouts": filter_breakouts,
+        "data_type": data_type,
     }

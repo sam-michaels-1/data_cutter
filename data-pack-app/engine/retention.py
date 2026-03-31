@@ -140,7 +140,8 @@ def _write_retention_block(ws, start, block, config,
     # --- Section sub-headers ---
     ws.cell(row=r_sections, column=s1_label, value="Net Retention Analysis")
     ws.cell(row=r_sections, column=s2_label, value="Customer Retention Analysis")
-    ws.cell(row=r_sections, column=s3_label, value="ARR / Customer")
+    metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
+    ws.cell(row=r_sections, column=s3_label, value=f"{metric_label} / Customer")
 
     # --- Column header row ---
     # Filter labels
@@ -210,13 +211,13 @@ def _write_retention_block(ws, start, block, config,
 
     # ===== SECTION 1: Net Retention Analysis (ARR) =====
     # Row labels
-    ws.cell(row=r_bop,       column=s1_label, value="BoP ARR")
+    ws.cell(row=r_bop,       column=s1_label, value=f"BoP {metric_label}")
     ws.cell(row=r_churn,     column=s1_label, value="(-) Churn")
     ws.cell(row=r_downsell,  column=s1_label, value="(-) Downsell")
     ws.cell(row=r_upsell,    column=s1_label, value="(+) Upsell / Cross-sell")
-    ws.cell(row=r_retained,  column=s1_label, value="Retained ARR")
+    ws.cell(row=r_retained,  column=s1_label, value=f"Retained {metric_label}")
     ws.cell(row=r_new_logo,  column=s1_label, value="(+) New Logo")
-    ws.cell(row=r_eop,       column=s1_label, value="EoP ARR")
+    ws.cell(row=r_eop,       column=s1_label, value=f"EoP {metric_label}")
     ws.cell(row=r_growth,    column=s1_label, value="% Growth")
     ws.cell(row=r_check,     column=s1_label, value="Check")
     ws.cell(row=r_lost_ret,  column=s1_label, value="% Lost-Only Retention")
@@ -353,7 +354,7 @@ def _write_retention_block(ws, start, block, config,
     ws.cell(row=r_upsell,    column=s3_label, value="Retained Customers")
     ws.cell(row=r_retained,  column=s3_label, value="(+) New Logo")
     ws.cell(row=r_new_logo,  column=s3_label, value="EoP Customers")
-    ws.cell(row=r_eop,       column=s3_label, value="% Growth ARR/Cust.")
+    ws.cell(row=r_eop,       column=s3_label, value=f"% Growth {metric_label}/Cust.")
     ws.cell(row=r_lost_ret,  column=s3_label, value="New Logo vs Churn")
     ws.cell(row=r_punit_ret, column=s3_label, value="New Logo vs Retained")
 

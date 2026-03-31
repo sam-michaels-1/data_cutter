@@ -5,6 +5,7 @@ import { formatCurrency } from "../../utils/format";
 interface Props {
   customers: TopCustomer[];
   scaleFactor: number;
+  metricLabel?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -14,14 +15,14 @@ const STATUS_STYLES: Record<string, string> = {
   New: "text-blue-700 bg-blue-100",
 };
 
-export default function TopCustomersTable({ customers, scaleFactor }: Props) {
+export default function TopCustomersTable({ customers, scaleFactor, metricLabel = "ARR" }: Props) {
   // Derive attribute column names from the first customer
   const attrKeys = customers.length > 0 ? Object.keys(customers[0].attributes) : [];
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-        Top 10 Customers by ARR
+        Top 10 Customers by {metricLabel}
       </h3>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -33,7 +34,7 @@ export default function TopCustomersTable({ customers, scaleFactor }: Props) {
                 <th key={k} className="text-left py-2 pr-4">{k}</th>
               ))}
               <th className="text-left py-2 pr-4">Cohort</th>
-              <th className="text-right py-2 pr-4">ARR</th>
+              <th className="text-right py-2 pr-4">{metricLabel}</th>
               <th className="text-right py-2 pr-4">Change</th>
               <th className="text-right py-2 pr-4">% of Total</th>
               <th className="text-center py-2 pr-4 w-16">Trend</th>

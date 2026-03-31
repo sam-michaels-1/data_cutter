@@ -15,6 +15,7 @@ interface Props {
   arrOverTime: number[];
   arrGrowthPcts: (number | null)[];
   scaleFactor: number;
+  metricLabel?: string;
 }
 
 /**
@@ -65,7 +66,7 @@ function CustomTick({ x, y, payload, growthPcts, periods }: {
   );
 }
 
-export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scaleFactor }: Props) {
+export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scaleFactor, metricLabel = "ARR" }: Props) {
   const data = periods.map((label, i) => ({
     period: label,
     arr: arrOverTime[i],
@@ -74,7 +75,7 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-        ARR Over Time
+        {metricLabel} Over Time
       </h3>
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data} margin={{ top: 5, right: 20, bottom: 30, left: 10 }}>
@@ -99,7 +100,7 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
             tickLine={false}
           />
           <Tooltip
-            formatter={(value: number) => [formatCurrency(value, scaleFactor), "ARR"]}
+            formatter={(value: number) => [formatCurrency(value, scaleFactor), metricLabel]}
             contentStyle={{
               backgroundColor: "#ffffff",
               border: "1px solid #E5E7EB",

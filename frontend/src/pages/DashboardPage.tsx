@@ -64,7 +64,8 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { overview, granularity, available_granularities, scale_factor, attribute_options } = data;
+  const { overview, granularity, available_granularities, scale_factor, attribute_options, data_type } = data;
+  const metricLabel = data_type === "revenue" ? "Revenue" : "ARR";
 
   return (
     <div className="p-6 space-y-4 max-w-[1400px]">
@@ -105,6 +106,7 @@ export default function DashboardPage() {
         scaleFactor={scale_factor}
         latestPeriodLabel={overview.latest_period_label}
         latestPeriodDate={overview.latest_period_date}
+        metricLabel={metricLabel}
       />
 
       {/* Charts row */}
@@ -114,6 +116,7 @@ export default function DashboardPage() {
           arrOverTime={overview.arr_over_time}
           arrGrowthPcts={overview.arr_growth_pcts}
           scaleFactor={scale_factor}
+          metricLabel={metricLabel}
         />
         {overview.waterfall && (
           <WaterfallChart waterfall={overview.waterfall} scaleFactor={scale_factor} />
@@ -125,6 +128,7 @@ export default function DashboardPage() {
         <TopCustomersTable
           customers={overview.top_customers}
           scaleFactor={scale_factor}
+          metricLabel={metricLabel}
         />
       )}
     </div>

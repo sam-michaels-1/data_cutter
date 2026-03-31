@@ -6,6 +6,7 @@ interface Props {
   metric: CohortMetric;
   scaleFactor: number;
   granularity: string;
+  metricLabel?: string;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ const PERIOD_PREFIX: Record<string, string> = {
   monthly: "M",
 };
 
-export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity }: Props) {
+export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity, metricLabel = "ARR" }: Props) {
   const { cohorts } = cohort;
 
   if (cohorts.length === 0) {
@@ -117,7 +118,7 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
 
   // "#" column header and value depend on metric
   const isPctMetric = metric === "ndr" || metric === "logo_retention";
-  const sizeHeader = isPctMetric || metric === "arr" ? "Starting $ARR" : "# Customers";
+  const sizeHeader = isPctMetric || metric === "arr" ? `Starting $${metricLabel}` : "# Customers";
 
   return (
     <div className="overflow-x-auto">

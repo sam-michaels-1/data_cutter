@@ -6,6 +6,7 @@ interface Props {
   scaleFactor: number;
   latestPeriodLabel: string;
   latestPeriodDate: string;
+  metricLabel?: string;
 }
 
 const CARDS: {
@@ -13,7 +14,7 @@ const CARDS: {
   label: string;
   format: "currency" | "pct" | "count";
 }[] = [
-  { key: "total_arr", label: "Total ARR", format: "currency" },
+  { key: "total_arr", label: "Total {metric}", format: "currency" },
   { key: "customer_count", label: "Customers", format: "count" },
   { key: "net_retention_pct", label: "Net Retention", format: "pct" },
   { key: "yoy_growth_pct", label: "YoY Growth", format: "pct" },
@@ -31,7 +32,7 @@ function formatAsOfDate(isoDate: string): string {
   }
 }
 
-export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, latestPeriodDate }: Props) {
+export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, latestPeriodDate, metricLabel = "ARR" }: Props) {
   return (
     <div className="space-y-2">
       {latestPeriodLabel && (
@@ -43,7 +44,8 @@ export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, late
         </p>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {CARDS.map(({ key, label, format }) => {
+        {CARDS.map(({ key, label: rawLabel, format }) => {
+          const label = rawLabel.replace("{metric}", metricLabel);
           const raw = stats[key];
           let display: string;
           let color = "text-gray-900";

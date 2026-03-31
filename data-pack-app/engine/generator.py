@@ -270,7 +270,8 @@ def _create_control_tab(wb, config):
     ws.title = "Control"
 
     ws.cell(row=3, column=2, value="Raw Data Type:")
-    ws.cell(row=3, column=3, value="ARR")
+    metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
+    ws.cell(row=3, column=3, value=metric_label)
 
     ws.cell(row=4, column=2, value="Scale Factor (Divide By):")
     ws.cell(row=4, column=3, value=config['scale_factor'])

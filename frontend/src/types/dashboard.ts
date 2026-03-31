@@ -67,6 +67,7 @@ export interface DashboardResponse {
   available_granularities: string[];
   scale_factor: number;
   attribute_options: AttributeOption[];
+  data_type: string;
 }
 
 export type CohortMetric = "ndr" | "arr" | "logo_retention" | "customers";

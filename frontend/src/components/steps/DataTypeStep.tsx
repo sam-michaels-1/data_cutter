@@ -16,7 +16,7 @@ const OPTIONS: { value: DataType; label: string; desc: string; disabled: boolean
     value: "revenue",
     label: "Revenue (Transactional)",
     desc: "Cumulative over a period. All rows are summed per customer per period.",
-    disabled: true,
+    disabled: false,
   },
 ];
 

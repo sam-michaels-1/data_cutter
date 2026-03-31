@@ -96,7 +96,7 @@ def generate_cohort_tab(wb, config, clean_sheet_name, clean_layout,
     check_refs = []
 
     for block_idx, block in enumerate(filter_blocks):
-        block_start = 6 + block_idx * (num_cohorts + 10)
+        block_start = 6 + block_idx * (num_cohorts + 9)
 
         _write_cohort_block(
             ws, block_start, block, config,
@@ -144,16 +144,17 @@ def _write_cohort_block(ws, start_row, block, config,
     r_headers = start_row + 3  # column headers row
 
     # Title (at B column)
+    metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
     ws.cell(row=r_title, column=q_col,
-            value=f"{title} {granularity.capitalize()} ARR by Cohort")
+            value=f"{title} {granularity.capitalize()} {metric_label} by Cohort")
 
     # Section headers
     ws.cell(row=r_section_headers, column=s1_start,
-            value=f"{granularity.capitalize()} ARR")
+            value=f"{granularity.capitalize()} {metric_label}")
     ws.cell(row=r_section_headers, column=s2_start,
             value=f"{granularity.capitalize()} Customers")
     ws.cell(row=r_section_headers, column=s3_label,
-            value=f"{granularity.capitalize()} ARR Retention")
+            value=f"{granularity.capitalize()} {metric_label} Retention")
     ws.cell(row=r_section_headers, column=s4_label,
             value=f"{granularity.capitalize()} Logo Retention")
 
@@ -289,13 +290,12 @@ def _write_cohort_block(ws, start_row, block, config,
                       f"{col_letter(s1_start)}${r_headers}:{col_letter(s1_end)}${r_headers},"
                       f"{s1s}{row}:{s1e}{row})")
 
-        # Retention ratios: ARR[period] / Starting ARR
-        for period_idx in range(num_dates):
-            arr_col = s1_start + period_idx
+        # Retention ratios: ARR[period] / Starting ARR (left-adjusted)
+        for period_idx in range(num_dates - cohort_idx):
+            arr_col = s1_start + cohort_idx + period_idx
             dc = s3_data_start + period_idx
             ws.cell(row=row, column=dc,
-                    value=f"=IF({col_letter(arr_col)}{row}=0,"
-                          f'"",{col_letter(arr_col)}{row}/${s3sv}{row})')
+                    value=f"={col_letter(arr_col)}{row}/${s3sv}{row}")
 
         # Section 4: Logo Retention
         s2s = col_letter(s2_start)
@@ -307,25 +307,23 @@ def _write_cohort_block(ws, start_row, block, config,
                       f"{col_letter(s2_start)}${r_headers}:{col_letter(s2_end)}${r_headers},"
                       f"{s2s}{row}:{s2e}{row})")
 
-        for period_idx in range(num_dates):
-            count_col = s2_start + period_idx
+        for period_idx in range(num_dates - cohort_idx):
+            count_col = s2_start + cohort_idx + period_idx
             dc = s4_data_start + period_idx
             ws.cell(row=row, column=dc,
-                    value=f"=IF({col_letter(count_col)}{row}=0,"
-                          f'"",{col_letter(count_col)}{row}/${s4sv}{row})')
+                    value=f"={col_letter(count_col)}{row}/${s4sv}{row}")
 
-    # Summary rows
+    # Summary rows (compact: Total+Average share a row)
     last_cohort_row = first_cohort_row + num_cohorts - 1
-    r_total = last_cohort_row + 1
-    r_avg = r_total + 1
-    r_median = r_avg + 1
-    r_weighted = r_median + 1
-    r_check = r_weighted + 1
+    r_total = last_cohort_row + 1   # S1/S2 Total + S3/S4 Average
+    r_median = r_total + 1          # S3/S4 Median
+    r_weighted = r_median + 1       # S3/S4 Weighted Average
+    r_check = r_weighted + 1        # S1/S2 Check
 
     # Filter columns for summary rows
     for attr_idx in range(num_attrs):
         fc = filter_start + attr_idx
-        for r in [r_total, r_avg, r_median, r_weighted, r_check]:
+        for r in [r_total, r_median, r_weighted, r_check]:
             ws.cell(row=r, column=fc,
                     value=f"={col_letter(fc)}{r-1}")
 
@@ -342,11 +340,12 @@ def _write_cohort_block(ws, start_row, block, config,
                 value=f"=SUM({dc2l}{first_cohort_row}:{dc2l}{last_cohort_row})")
 
     # Average, Median, Weighted for retention columns
+    # Average goes on r_total row (same row as S1/S2 Total)
     for period_idx in range(num_dates):
         # Section 3 (ARR retention)
         dc3 = s3_data_start + period_idx
         dc3l = col_letter(dc3)
-        ws.cell(row=r_avg, column=dc3,
+        ws.cell(row=r_total, column=dc3,
                 value=f"=AVERAGE({dc3l}{first_cohort_row}:{dc3l}{last_cohort_row})")
         ws.cell(row=r_median, column=dc3,
                 value=f"=MEDIAN({dc3l}{first_cohort_row}:{dc3l}{last_cohort_row})")
@@ -363,7 +362,7 @@ def _write_cohort_block(ws, start_row, block, config,
         # Section 4 (Logo retention)
         dc4 = s4_data_start + period_idx
         dc4l = col_letter(dc4)
-        ws.cell(row=r_avg, column=dc4,
+        ws.cell(row=r_total, column=dc4,
                 value=f"=AVERAGE({dc4l}{first_cohort_row}:{dc4l}{last_cohort_row})")
         ws.cell(row=r_median, column=dc4,
                 value=f"=MEDIAN({dc4l}{first_cohort_row}:{dc4l}{last_cohort_row})")
@@ -393,20 +392,31 @@ def _write_cohort_block(ws, start_row, block, config,
         crit_str = ','.join(criteria_check)
         sum_range = (f"'{clean_sheet}'!{col_letter(clean_col)}${cdr_first}"
                      f":{col_letter(clean_col)}${cdr_last}")
-        ws.cell(row=r_check, column=dc,
-                value=f"={dcl}{r_total}*{units_cell}-SUMIFS({sum_range},{crit_str})")
+        if crit_str:
+            ws.cell(row=r_check, column=dc,
+                    value=f"={dcl}{r_total}*{units_cell}-SUMIFS({sum_range},{crit_str})")
+        else:
+            ws.cell(row=r_check, column=dc,
+                    value=f"={dcl}{r_total}*{units_cell}-SUM({sum_range})")
 
         # Section 2 check (customers)
         dc2 = s2_start + period_idx
         dc2l = col_letter(dc2)
         count_range = (f"'{clean_sheet}'!{col_letter(clean_col)}${cdr_first}"
                        f":{col_letter(clean_col)}${cdr_last}")
-        ws.cell(row=r_check, column=dc2,
-                value=f'={dc2l}{r_total}-COUNTIFS({count_range},"<>"&0,{crit_str})')
+        if crit_str:
+            ws.cell(row=r_check, column=dc2,
+                    value=f'={dc2l}{r_total}-COUNTIFS({count_range},"<>"&0,{crit_str})')
+        else:
+            ws.cell(row=r_check, column=dc2,
+                    value=f'={dc2l}{r_total}-COUNTIF({count_range},"<>"&0)')
 
     # Row labels for summary
     ws.cell(row=r_total, column=cohort_label_col, value="Total")
-    ws.cell(row=r_avg, column=cohort_label_col, value="Average")
-    ws.cell(row=r_median, column=cohort_label_col, value="Median")
-    ws.cell(row=r_weighted, column=cohort_label_col, value="Weighted Average")
+    ws.cell(row=r_total, column=s3_label, value="Average")
+    ws.cell(row=r_total, column=s4_label, value="Average")
+    ws.cell(row=r_median, column=s3_label, value="Median")
+    ws.cell(row=r_median, column=s4_label, value="Median")
+    ws.cell(row=r_weighted, column=s3_label, value="Dollar-Weighted Average")
+    ws.cell(row=r_weighted, column=s4_label, value="Size-Weighted Average")
     ws.cell(row=r_check, column=cohort_label_col, value="Check")

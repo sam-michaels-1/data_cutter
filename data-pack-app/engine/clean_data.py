@@ -67,14 +67,22 @@ def generate_base_clean_data(wb, config, unique_dates, unique_customers):
     # --- Row 2: Quarter calculation ---
     ws.cell(row=2, column=layout['label'], value="Quarter")
 
+    data_type = config.get('data_type', 'arr')
+
     if granularity == 'monthly':
         # For monthly data, calculate fiscal quarter for each month
         for i in range(num_dates):
             c = layout['arr_start'] + i
             cl = col_letter(c)
-            ws.cell(row=2, column=c,
-                    value=f"=IF(MOD($B$1-MONTH({cl}6),3)=0,"
-                          f"INT(MOD(MONTH({cl}6)-(Control!$C$7+1),12)/3)+1,0)")
+            if data_type == 'revenue':
+                # Revenue: label every month with its fiscal quarter (1,1,1,2,2,2,...)
+                ws.cell(row=2, column=c,
+                        value=f"=INT(MOD(MONTH({cl}6)-(Control!$C$7+1),12)/3)+1")
+            else:
+                # ARR: only label quarter-end months (0,0,1,0,0,2,...)
+                ws.cell(row=2, column=c,
+                        value=f"=IF(MOD($B$1-MONTH({cl}6),3)=0,"
+                              f"INT(MOD(MONTH({cl}6)-(Control!$C$7+1),12)/3)+1,0)")
     elif granularity == 'quarterly':
         # For quarterly data, write quarter numbers
         # First quarter is derived from the first date
@@ -142,8 +150,9 @@ def generate_base_clean_data(wb, config, unique_dates, unique_customers):
 
     # --- Row 5: Section headers ---
     ws.cell(row=5, column=layout['attr_start'], value="Customer Identifying Information")
+    metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
     ws.cell(row=5, column=layout['arr_start'],
-            value=f"{granularity.capitalize()} ARR by Date")
+            value=f"{granularity.capitalize()} {metric_label} by Date")
     ws.cell(row=5, column=layout['churn_start'], value="Churn?")
     ws.cell(row=5, column=layout['downsell_start'], value="Downsell?")
     ws.cell(row=5, column=layout['upsell_start'], value="Upsell?")
@@ -323,12 +332,18 @@ def generate_aggregated_clean_data(wb, config, source_sheet, source_layout,
             ws.cell(row=2, column=layout['arr_start'] + i,
                     value=f"=IF({prev_cl}2=4,1,{prev_cl}2+1)")
     elif target_granularity == 'annual':
-        # Annual: always Q4
-        ws.cell(row=2, column=layout['arr_start'], value=4)
-        for i in range(1, num_dates):
-            prev_cl = col_letter(layout['arr_start'] + i - 1)
-            ws.cell(row=2, column=layout['arr_start'] + i,
-                    value=f"={prev_cl}2")
+        data_type = config.get('data_type', 'arr')
+        if data_type == 'revenue':
+            # Revenue: use "<>" so SUMIFS matches all quarters (sums whole year)
+            for i in range(num_dates):
+                ws.cell(row=2, column=layout['arr_start'] + i, value="<>")
+        else:
+            # ARR: always Q4
+            ws.cell(row=2, column=layout['arr_start'], value=4)
+            for i in range(1, num_dates):
+                prev_cl = col_letter(layout['arr_start'] + i - 1)
+                ws.cell(row=2, column=layout['arr_start'] + i,
+                        value=f"={prev_cl}2")
 
     _copy_helper_rows_to_derived(ws, layout, 2)
 
@@ -348,17 +363,25 @@ def generate_aggregated_clean_data(wb, config, source_sheet, source_layout,
         ws.cell(row=3, column=layout['arr_start'],
                 value=f"=INDEX('{source_sheet}'!${src_arr_start_cl}3:${src_arr_end_cl}3,"
                       f"MATCH(TRUE,INDEX('{source_sheet}'!${src_arr_start_cl}3:${src_arr_end_cl}3<>0,),0))")
+        data_type = config.get('data_type', 'arr')
         for i in range(1, num_dates):
             prev_cl = col_letter(layout['arr_start'] + i - 1)
-            ws.cell(row=3, column=layout['arr_start'] + i,
-                    value=f"=IF({prev_cl}2=4,{prev_cl}3+1,{prev_cl}3)")
+            if data_type == 'revenue':
+                # Revenue: simple increment (no Q4 check since quarters are "<>")
+                ws.cell(row=3, column=layout['arr_start'] + i,
+                        value=f"={prev_cl}3+1")
+            else:
+                # ARR: increment year when quarter wraps from Q4
+                ws.cell(row=3, column=layout['arr_start'] + i,
+                        value=f"=IF({prev_cl}2=4,{prev_cl}3+1,{prev_cl}3)")
 
     _copy_helper_rows_to_derived(ws, layout, 3)
 
     # --- Row 5: Section headers ---
+    metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
     ws.cell(row=5, column=layout['attr_start'], value="Customer Identifying Information")
     ws.cell(row=5, column=layout['arr_start'],
-            value=f"{target_granularity.capitalize()} ARR by Date")
+            value=f"{target_granularity.capitalize()} {metric_label} by Date")
     ws.cell(row=5, column=layout['churn_start'], value="Churn?")
     ws.cell(row=5, column=layout['downsell_start'], value="Downsell?")
     ws.cell(row=5, column=layout['upsell_start'], value="Upsell?")

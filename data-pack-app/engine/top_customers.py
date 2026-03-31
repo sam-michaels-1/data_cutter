@@ -64,7 +64,8 @@ def generate_top_customers_tab(wb, config, clean_sheet_name, clean_layout,
     units_cell = f"${col_letter(rank_num_col)}$3"
 
     # --- Row 5: Section headers ---
-    ws.cell(row=5, column=s1_start, value="ARR")
+    metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
+    ws.cell(row=5, column=s1_start, value=metric_label)
     ws.cell(row=5, column=s2_start, value="% YoY Growth")
     ws.cell(row=5, column=s3_start, value="% of Total")
 
@@ -193,7 +194,7 @@ def generate_top_customers_tab(wb, config, clean_sheet_name, clean_layout,
                 value=f"={arr_cl}{r_other}/{arr_cl}${r_total}")
 
     # Total ARR (all customers)
-    ws.cell(row=r_total, column=cust_id_col, value="Total ARR")
+    ws.cell(row=r_total, column=cust_id_col, value=f"Total {metric_label}")
     for i in range(num_dates):
         clean_col = clean_layout['arr_start'] + i
         ws.cell(row=r_total, column=s1_start + i,

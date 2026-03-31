@@ -329,14 +329,13 @@ def format_cohort_tab(ws, config, filter_blocks, num_dates, num_cohorts,
     max_col = s4_data_end
 
     for block_idx in range(len(filter_blocks)):
-        block_start = 6 + block_idx * (num_cohorts + 10)
+        block_start = 6 + block_idx * (num_cohorts + 9)
         r_section_headers = block_start + 2
         r_headers = block_start + 3
         first_cohort_row = r_headers + 1
         last_cohort_row = first_cohort_row + num_cohorts - 1
         r_total = last_cohort_row + 1
-        r_avg = r_total + 1
-        r_median = r_avg + 1
+        r_median = r_total + 1
         r_weighted = r_median + 1
         r_check = r_weighted + 1
 
