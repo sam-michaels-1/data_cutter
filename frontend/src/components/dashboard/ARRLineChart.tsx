@@ -46,7 +46,7 @@ export default function ARRLineChart({ periods, arrOverTime }: Props) {
             tickLine={false}
           />
           <Tooltip
-            formatter={(value: number) => [formatYAxis(value), "ARR"]}
+            formatter={(value: any) => [formatYAxis(value), "ARR"]}
             contentStyle={{
               backgroundColor: "#ffffff",
               border: "1px solid #E5E7EB",

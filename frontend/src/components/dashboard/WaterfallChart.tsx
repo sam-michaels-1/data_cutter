@@ -74,7 +74,7 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
             tickLine={false}
           />
           <Tooltip
-            formatter={(value: [number, number]) => {
+            formatter={(value: any) => {
               const diff = Math.round((value[1] - value[0]) * 10) / 10;
               return [formatCurrency(Math.abs(diff), scaleFactor), "Amount"];
             }}

@@ -6,9 +6,8 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  LabelList,
 } from "recharts";
-import { formatCurrency, formatPct } from "../../utils/format";
+import { formatCurrency } from "../../utils/format";
 
 interface Props {
   periods: string[];
@@ -82,7 +81,7 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.8} vertical={false} />
           <XAxis
             dataKey="period"
-            tick={(props) => (
+            tick={(props: any) => (
               <CustomTick
                 {...props}
                 growthPcts={arrGrowthPcts}
@@ -100,7 +99,7 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
             tickLine={false}
           />
           <Tooltip
-            formatter={(value: number) => [formatCurrency(value, scaleFactor), metricLabel]}
+            formatter={(value: any) => [formatCurrency(value, scaleFactor), metricLabel]}
             contentStyle={{
               backgroundColor: "#ffffff",
               border: "1px solid #E5E7EB",
