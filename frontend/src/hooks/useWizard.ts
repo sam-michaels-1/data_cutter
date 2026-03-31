@@ -2,6 +2,7 @@ import { useReducer, useCallback } from "react";
 import type {
   WizardState,
   DataType,
+  DataFrequency,
   Granularity,
   ColumnMapping,
   AttributeSelection,
@@ -22,6 +23,8 @@ const INITIAL_STATE: WizardState = {
   detectedAttributes: [],
   scaleFactor: 1,
   rowCount: 0,
+  detectedFrequency: null,
+  dataFrequency: null,
   dataType: "arr",
   outputGranularities: [],
   fiscalYearEndMonth: 12,
@@ -47,9 +50,11 @@ type Action =
       attributes: AttributeCol[];
       scaleFactor: number;
       rowCount: number;
+      detectedFrequency: DataFrequency | null;
     }
   | { type: "SET_SHEET"; sheet: string }
   | { type: "SET_CONFIRMED_MAPPING"; mapping: ColumnMapping }
+  | { type: "SET_DATA_FREQUENCY"; dataFrequency: DataFrequency }
   | { type: "SET_DATA_TYPE"; dataType: DataType }
   | { type: "TOGGLE_GRANULARITY"; granularity: Granularity }
   | { type: "SET_FISCAL_MONTH"; month: number }
@@ -80,7 +85,8 @@ function reducer(state: WizardState, action: Action): WizardState {
     case "SET_SHEET":
       return { ...state, selectedSheet: action.sheet };
 
-    case "DETECT_SUCCESS":
+    case "DETECT_SUCCESS": {
+      const freq = action.detectedFrequency;
       return {
         ...state,
         columns: action.columns,
@@ -93,11 +99,17 @@ function reducer(state: WizardState, action: Action): WizardState {
         detectedAttributes: action.attributes,
         scaleFactor: action.scaleFactor,
         rowCount: action.rowCount,
+        detectedFrequency: freq,
+        dataFrequency: freq,
         isLoading: false,
       };
+    }
 
     case "SET_CONFIRMED_MAPPING":
       return { ...state, confirmedMapping: action.mapping };
+
+    case "SET_DATA_FREQUENCY":
+      return { ...state, dataFrequency: action.dataFrequency };
 
     case "SET_DATA_TYPE":
       return { ...state, dataType: action.dataType };

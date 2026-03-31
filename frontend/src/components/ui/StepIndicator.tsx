@@ -1,5 +1,6 @@
 const STEPS = [
   "Upload & Columns",
+  "Frequency",
   "Data Type",
   "Granularity",
   "Identifiers",

@@ -5,6 +5,7 @@ The engine (data-pack-app/engine/generator.py) expects a specific config dict
 structure. This module builds that dict from the frontend's GenerateRequest.
 """
 
+from typing import Optional
 from collections import OrderedDict
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
@@ -89,6 +90,7 @@ def build_engine_config(
     fiscal_year_end_month: int,
     row_count: int,
     scale_factor: int,
+    data_frequency: Optional[str] = None,  # user override for raw data frequency
 ) -> dict:
     """
     Build the config dict the engine expects.
@@ -100,8 +102,8 @@ def build_engine_config(
     for attr in attributes:
         attrs[attr["display_name"]] = attr["letter"]
 
-    # Detect raw data frequency (this becomes time_granularity for the engine)
-    raw_freq = _detect_raw_data_frequency(filepath, sheet_name, date_col)
+    # Use user-provided frequency override if available, otherwise auto-detect
+    raw_freq = data_frequency or _detect_raw_data_frequency(filepath, sheet_name, date_col)
 
     # Auto-generate filter breakouts from the first attribute
     filter_breakouts = []

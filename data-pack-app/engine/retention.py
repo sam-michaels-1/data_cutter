@@ -285,8 +285,11 @@ def _write_retention_block(ws, start, block, config,
         ws.cell(row=r_nl_pct, column=dc,
                 value=f"={dcl}{r_new_logo}/{dcl}{r_bop}")
 
-        # % New Logo Growth (only if enough periods)
-        # (not populated in reference for annual with few periods)
+        # % New Logo Growth (YoY: compare to same period one year ago)
+        if i >= yoy_offset:
+            prior_cl = col_letter(s1_start + i - yoy_offset)
+            ws.cell(row=r_nl_growth, column=dc,
+                    value=f"={dcl}{r_new_logo}/{prior_cl}{r_new_logo}-1")
 
     # ===== SECTION 2: Customer Retention Analysis =====
     # Row labels for Section 2

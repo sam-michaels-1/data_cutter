@@ -148,6 +148,15 @@ def generate_base_clean_data(wb, config, unique_dates, unique_customers):
     # Copy Year row to derived sections
     _copy_helper_rows_to_derived(ws, layout, 3)
 
+    # --- Row 4: Month row (date values for SUMIFS matching) ---
+    # For quarterly/annual base tabs, row 6 will hold formatted labels (Q1'20, FY'20)
+    # so we need the raw date values in row 4 for SUMIFS to match against raw data.
+    if granularity in ('quarterly', 'annual'):
+        ws.cell(row=4, column=layout['label'], value="Month")
+        for i, date_val in enumerate(unique_dates):
+            ws.cell(row=4, column=layout['arr_start'] + i, value=date_val)
+        _copy_helper_rows_to_derived(ws, layout, 4)
+
     # --- Row 5: Section headers ---
     ws.cell(row=5, column=layout['attr_start'], value="Customer Identifying Information")
     metric_label = "ARR" if config.get("data_type", "arr") == "arr" else "Revenue"
@@ -171,7 +180,14 @@ def generate_base_clean_data(wb, config, unique_dates, unique_customers):
 
     # Date headers in ARR section
     for i, date_val in enumerate(unique_dates):
-        ws.cell(row=6, column=layout['arr_start'] + i, value=date_val)
+        c = layout['arr_start'] + i
+        cl = col_letter(c)
+        if granularity == 'quarterly':
+            ws.cell(row=6, column=c, value=f'="Q"&{cl}2&"\'"&RIGHT({cl}3,2)')
+        elif granularity == 'annual':
+            ws.cell(row=6, column=c, value=f'="FY"&"\'"&RIGHT({cl}3,2)')
+        else:
+            ws.cell(row=6, column=c, value=date_val)
 
     # Derived section date headers (reference the ARR section, offset by yoy_offset)
     for i in range(layout['num_derived']):
@@ -205,6 +221,8 @@ def generate_base_clean_data(wb, config, unique_dates, unique_customers):
 
     arr_start_cl = col_letter(layout['arr_start'])
     arr_end_cl = col_letter(layout['arr_end'])
+    # For quarterly/annual base tabs, dates are in row 4; for monthly, row 6
+    date_ref_row = 4 if granularity in ('quarterly', 'annual') else 6
 
     for idx, cust_id in enumerate(unique_customers):
         row = first_data_row + idx
@@ -231,15 +249,13 @@ def generate_base_clean_data(wb, config, unique_dates, unique_customers):
         ws.cell(row=row, column=layout['rank'],
                 value=f"=RANK({arr_end_cl}{row},"
                       f"${arr_end_cl}${first_data_row}:${arr_end_cl}${last_data_row})")
-
-        # ARR columns: SUMIFS from raw data
         for i in range(num_dates):
             c = layout['arr_start'] + i
             cl = col_letter(c)
             ws.cell(row=row, column=c,
                     value=sumifs(
                         raw_arr_range,
-                        (raw_date_range, f"{cl}$6"),
+                        (raw_date_range, f"{cl}${date_ref_row}"),
                         (raw_cust_range, f"${cust_id_cl}{row}")
                     ))
 

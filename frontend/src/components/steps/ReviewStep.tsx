@@ -23,6 +23,7 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
         session_id: state.sessionId,
         sheet_name: state.selectedSheet,
         data_type: state.dataType,
+        data_frequency: state.dataFrequency,
         column_mapping: state.confirmedMapping,
         attributes: state.selectedAttributes,
         output_granularities: state.outputGranularities,
@@ -52,6 +53,7 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3 text-sm">
         <Row label="File" value={state.filename || "-"} />
         <Row label="Sheet" value={state.selectedSheet || "-"} />
+        <Row label="Data Frequency" value={state.dataFrequency ? state.dataFrequency.charAt(0).toUpperCase() + state.dataFrequency.slice(1) : "-"} />
         <Row label="Data Type" value={state.dataType.toUpperCase()} />
         <Row
           label="Columns"

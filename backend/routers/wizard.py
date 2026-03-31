@@ -34,7 +34,7 @@ from temp_store import (
     session_exists,
 )
 from services.detect import detect_columns
-from services.config_builder import build_engine_config
+from services.config_builder import build_engine_config, _detect_raw_data_frequency
 
 router = APIRouter(prefix="/api")
 
@@ -88,6 +88,15 @@ async def detect(req: DetectColumnsRequest):
         raise HTTPException(400, f"Detection failed: {e}")
 
     mapping = result["detected_mapping"]
+
+    # Detect data frequency from date intervals
+    detected_freq = None
+    try:
+        detected_freq = _detect_raw_data_frequency(
+            filepath, req.sheet_name, mapping["date_col"])
+    except Exception:
+        pass
+
     return DetectColumnsResponse(
         columns=[ColumnInfo(**c) for c in result["columns"]],
         detected_mapping=DetectedMapping(
@@ -98,6 +107,7 @@ async def detect(req: DetectColumnsRequest):
         ),
         row_count=result["row_count"],
         auto_scale_factor=result["auto_scale_factor"],
+        detected_frequency=detected_freq,
     )
 
 
@@ -130,6 +140,7 @@ async def generate(req: GenerateRequest):
         fiscal_year_end_month=req.fiscal_year_end_month,
         row_count=det["row_count"],
         scale_factor=det["auto_scale_factor"],
+        data_frequency=req.data_frequency,
     )
 
     # Persist config for the dashboard endpoint

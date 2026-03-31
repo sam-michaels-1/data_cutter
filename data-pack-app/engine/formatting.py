@@ -266,7 +266,7 @@ def format_retention_tab(ws, config, filter_blocks, num_derived, num_attrs,
             # Percentage format
             for r in [r_growth]:
                 ws.cell(row=r, column=c).number_format = NF_PCT_DEC
-            for r in [r_lost_ret, r_punit_ret, r_net_ret, r_nl_pct]:
+            for r in [r_lost_ret, r_punit_ret, r_net_ret, r_nl_pct, r_nl_growth]:
                 ws.cell(row=r, column=c).number_format = NF_PCT_DEC
 
         # --- Section 2 (Customer Retention) formatting ---

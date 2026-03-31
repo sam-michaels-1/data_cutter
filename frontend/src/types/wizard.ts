@@ -29,6 +29,7 @@ export interface DetectColumnsResponse {
   detected_mapping: DetectedMapping;
   row_count: number;
   auto_scale_factor: number;
+  detected_frequency: string | null;
 }
 
 export interface ColumnMapping {
@@ -46,6 +47,7 @@ export interface GenerateRequest {
   session_id: string;
   sheet_name: string;
   data_type: string;
+  data_frequency: string | null;
   column_mapping: ColumnMapping;
   attributes: AttributeSelection[];
   output_granularities: string[];
@@ -59,6 +61,7 @@ export interface GenerateResponse {
 
 // Wizard state
 export type DataType = "arr" | "revenue";
+export type DataFrequency = "monthly" | "quarterly";
 export type Granularity = "monthly" | "quarterly" | "annual";
 
 export interface WizardState {
@@ -74,14 +77,17 @@ export interface WizardState {
   detectedAttributes: AttributeCol[];
   scaleFactor: number;
   rowCount: number;
+  detectedFrequency: DataFrequency | null;
   // Step 2
-  dataType: DataType;
+  dataFrequency: DataFrequency | null;
   // Step 3
+  dataType: DataType;
+  // Step 4
   outputGranularities: Granularity[];
   fiscalYearEndMonth: number;
-  // Step 4
-  selectedAttributes: AttributeSelection[];
   // Step 5
+  selectedAttributes: AttributeSelection[];
+  // Step 6
   downloadId: string | null;
   isGenerating: boolean;
   // Shared

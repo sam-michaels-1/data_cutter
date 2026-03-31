@@ -3,6 +3,7 @@ import { useWizard } from "../hooks/useWizard";
 import { useSession } from "../components/SessionProvider";
 import StepIndicator from "../components/ui/StepIndicator";
 import UploadStep from "../components/steps/UploadStep";
+import FrequencyStep from "../components/steps/FrequencyStep";
 import DataTypeStep from "../components/steps/DataTypeStep";
 import GranularityStep from "../components/steps/GranularityStep";
 import IdentifiersStep from "../components/steps/IdentifiersStep";
@@ -18,12 +19,14 @@ export default function ImportPage() {
       case 1:
         return !!(state.sessionId && state.selectedSheet && state.confirmedMapping);
       case 2:
-        return !!state.dataType;
+        return !!state.dataFrequency;
       case 3:
-        return state.outputGranularities.length > 0;
+        return !!state.dataType;
       case 4:
-        return true;
+        return state.outputGranularities.length > 0;
       case 5:
+        return true;
+      case 6:
         return false;
       default:
         return false;
@@ -42,12 +45,14 @@ export default function ImportPage() {
       case 1:
         return <UploadStep state={state} dispatch={dispatch} />;
       case 2:
-        return <DataTypeStep state={state} dispatch={dispatch} />;
+        return <FrequencyStep state={state} dispatch={dispatch} />;
       case 3:
-        return <GranularityStep state={state} dispatch={dispatch} />;
+        return <DataTypeStep state={state} dispatch={dispatch} />;
       case 4:
-        return <IdentifiersStep state={state} dispatch={dispatch} />;
+        return <GranularityStep state={state} dispatch={dispatch} />;
       case 5:
+        return <IdentifiersStep state={state} dispatch={dispatch} />;
+      case 6:
         return (
           <ReviewStep
             state={state}
@@ -94,7 +99,7 @@ export default function ImportPage() {
           Back
         </button>
 
-        {state.currentStep < 5 && (
+        {state.currentStep < 6 && (
           <button
             onClick={nextStep}
             disabled={!canProceed}

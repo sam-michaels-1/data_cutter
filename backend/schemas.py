@@ -1,6 +1,7 @@
 """
 Pydantic request / response models for the wizard API.
 """
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -43,6 +44,7 @@ class DetectColumnsResponse(BaseModel):
     detected_mapping: DetectedMapping
     row_count: int
     auto_scale_factor: int
+    detected_frequency: Optional[str] = None  # "monthly", "quarterly", or "annual"
 
 
 # ---------- Generate ----------
@@ -62,6 +64,7 @@ class GenerateRequest(BaseModel):
     session_id: str
     sheet_name: str
     data_type: str  # "arr" | "revenue"
+    data_frequency: Optional[str] = None  # "monthly" | "quarterly" — user override
     column_mapping: ColumnMapping
     attributes: list[AttributeSelection]
     output_granularities: list[str]   # e.g. ["monthly", "quarterly", "annual"]

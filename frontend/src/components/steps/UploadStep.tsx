@@ -49,6 +49,9 @@ export default function UploadStep({ state, dispatch }: Props) {
           attributes: res.detected_mapping.attribute_cols,
           scaleFactor: res.auto_scale_factor,
           rowCount: res.row_count,
+          detectedFrequency: (res.detected_frequency === "monthly" || res.detected_frequency === "quarterly")
+            ? res.detected_frequency
+            : null,
         });
       } catch (err: any) {
         dispatch({
