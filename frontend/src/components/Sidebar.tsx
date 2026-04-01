@@ -32,7 +32,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="px-5 py-5">
         <span className="text-lg font-bold text-teal-400 tracking-tight">
-          Data Cutter
+          Data Cube Cutter
         </span>
       </div>
 

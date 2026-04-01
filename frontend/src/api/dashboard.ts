@@ -1,22 +1,26 @@
-import axios from "axios";
+/**
+ * Client-side dashboard computation.
+ * Replaces the backend API call with local engine computation.
+ */
 import type { DashboardResponse } from "../types/dashboard";
-
-const api = axios.create({ baseURL: "/api" });
+import { getCurrentWorkbook, getCurrentConfig } from "./client";
+import { computeDashboard } from "../engine/compute";
 
 export async function fetchDashboard(
-  sessionId: string,
+  _sessionId: string,
   granularity?: string,
   filters?: Record<string, string>,
-  topN?: number
+  _topN?: number
 ): Promise<DashboardResponse> {
-  const params: Record<string, string | number> = {};
-  if (granularity) params.granularity = granularity;
-  if (filters && Object.keys(filters).length > 0)
-    params.filters = JSON.stringify(filters);
-  if (topN != null) params.top_n = topN;
-  const { data } = await api.get<DashboardResponse>(
-    `/dashboard/${sessionId}`,
-    { params }
-  );
-  return data;
+  const wb = getCurrentWorkbook();
+  const config = getCurrentConfig();
+
+  if (!wb || !config) {
+    throw new Error("No data loaded. Please import a file first.");
+  }
+
+  const result = computeDashboard(wb, config, granularity, filters, _topN || 10);
+
+  // Cast to DashboardResponse (the shape matches)
+  return result as unknown as DashboardResponse;
 }

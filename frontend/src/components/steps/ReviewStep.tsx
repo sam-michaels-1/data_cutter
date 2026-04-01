@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { WizardState } from "../../types/wizard";
-import { generate, getDownloadUrl } from "../../api/client";
+import { generate, getDownloadBlob } from "../../api/client";
 
 interface Props {
   state: WizardState;
@@ -33,10 +33,23 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
     } catch (err: any) {
       dispatch({
         type: "SET_ERROR",
-        error: err?.response?.data?.detail || "Generation failed",
+        error: err?.message || "Generation failed",
       });
     }
   }, [state, dispatch]);
+
+  const handleDownload = useCallback(() => {
+    const blob = getDownloadBlob();
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "data-pack-output.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -95,12 +108,12 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
           <div className="text-green-600 text-5xl">{"\u2705"}</div>
           <p className="font-semibold text-gray-800">Generation Complete!</p>
           <div className="flex items-center justify-center gap-3">
-            <a
-              href={getDownloadUrl(state.downloadId)}
+            <button
+              onClick={handleDownload}
               className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition"
             >
               Download Excel
-            </a>
+            </button>
             {onViewDashboard && (
               <button
                 onClick={onViewDashboard}

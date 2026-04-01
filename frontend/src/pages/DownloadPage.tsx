@@ -1,8 +1,22 @@
+import { useCallback } from "react";
 import { useSession } from "../components/SessionProvider";
-import { getDownloadUrl } from "../api/client";
+import { getDownloadBlob } from "../api/client";
 
 export default function DownloadPage() {
   const { sessionId } = useSession();
+
+  const handleDownload = useCallback(() => {
+    const blob = getDownloadBlob();
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "data-pack-output.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
 
   if (!sessionId) {
     return (
@@ -24,12 +38,12 @@ export default function DownloadPage() {
       <p className="text-gray-500 text-sm mb-6">
         Your analysis workbook has been generated and is ready for download.
       </p>
-      <a
-        href={getDownloadUrl(sessionId)}
+      <button
+        onClick={handleDownload}
         className="inline-block bg-teal-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-teal-700 transition"
       >
         Download Excel
-      </a>
+      </button>
     </div>
   );
 }
