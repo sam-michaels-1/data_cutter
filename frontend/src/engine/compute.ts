@@ -4,6 +4,7 @@
  */
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
+import { parseHeaderDate } from './detect';
 
 function colNumFromLetter(letter: string): number {
   let result = 0;
@@ -58,6 +59,66 @@ function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
     }
 
     rows.push(record);
+  });
+
+  return rows;
+}
+
+/**
+ * Read data from a cleaned/wide table (customers as rows, dates as columns).
+ * Converts to the same RawRecord[] format as readRawData.
+ */
+function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[] {
+  const ws = wb.getWorksheet(config.raw_data_sheet);
+  if (!ws) return [];
+
+  const dateColLetters = config.date_columns || [];
+  if (dateColLetters.length === 0) return [];
+
+  const custIdx = colNumFromLetter(config.customer_id_col);
+  const dateHeaderRowNum = config.date_header_row || (config.raw_data_first_row - 1);
+  const headerRow = ws.getRow(dateHeaderRowNum);
+
+  // Read dates from header row for each date column
+  const dateColInfo: { colNum: number; date: Date }[] = [];
+  for (const letter of dateColLetters) {
+    const colNum = colNumFromLetter(letter);
+    const val = headerRow.getCell(colNum).value;
+    let date: Date | null = null;
+    if (val instanceof Date) {
+      date = val;
+    } else if (val != null) {
+      date = parseHeaderDate(String(val));
+    }
+    if (date) {
+      dateColInfo.push({ colNum, date });
+    }
+  }
+
+  // Read attribute column indices
+  const attrCols: Record<string, number> = {};
+  for (const [name, letter] of Object.entries(config.attributes || {})) {
+    attrCols[name] = colNumFromLetter(letter);
+  }
+
+  const rows: RawRecord[] = [];
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber < config.raw_data_first_row) return;
+    const custVal = row.getCell(custIdx).value;
+    if (custVal == null) return;
+    const customerId = String(custVal).trim();
+
+    for (const { colNum, date } of dateColInfo) {
+      const arrVal = row.getCell(colNum).value;
+      const arr = typeof arrVal === 'number' ? arrVal : (arrVal ? parseFloat(String(arrVal)) || 0 : 0);
+
+      const record: RawRecord = { date, customer_id: customerId, arr };
+      for (const [name, colIdx] of Object.entries(attrCols)) {
+        const val = row.getCell(colIdx).value;
+        record[name] = val != null ? String(val).trim() : '';
+      }
+      rows.push(record);
+    }
   });
 
   return rows;
@@ -359,7 +420,9 @@ export function computeDashboard(
   filters?: Record<string, string>,
   topN = 10
 ): DashboardResult {
-  let rawRows = readRawData(wb, config);
+  let rawRows = config.input_format === 'cleaned'
+    ? readCleanedData(wb, config)
+    : readRawData(wb, config);
   const fyMonth = config.fiscal_year_end_month;
   const scaleFactor = config.scale_factor;
   const outputGrans = config.output_granularities;

@@ -15,8 +15,10 @@ const MONTHS = [
 
 export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) {
   const handleGenerate = useCallback(async () => {
-    if (!state.sessionId || !state.selectedSheet || !state.confirmedMapping)
-      return;
+    if (!state.sessionId || !state.selectedSheet) return;
+    if (state.inputFormat === "raw" && !state.confirmedMapping) return;
+    if (state.inputFormat === "cleaned" && (!state.customerNameCol || state.dateColumns.length === 0)) return;
+
     dispatch({ type: "GENERATE_START" });
     try {
       const res = await generate({
@@ -24,10 +26,15 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
         sheet_name: state.selectedSheet,
         data_type: state.dataType,
         data_frequency: state.dataFrequency,
-        column_mapping: state.confirmedMapping,
+        column_mapping: state.confirmedMapping || { date_col: "", customer_id_col: state.customerNameCol || "", arr_col: "" },
         attributes: state.selectedAttributes,
         output_granularities: state.outputGranularities,
         fiscal_year_end_month: state.fiscalYearEndMonth,
+        input_format: state.inputFormat,
+        date_columns: state.dateColumns,
+        customer_name_col: state.customerNameCol,
+        header_row: state.headerRow,
+        date_header_row: state.dateHeaderRow ?? undefined,
       });
       dispatch({ type: "GENERATE_SUCCESS", downloadId: res.download_id });
     } catch (err: any) {
@@ -66,12 +73,20 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3 text-sm">
         <Row label="File" value={state.filename || "-"} />
         <Row label="Sheet" value={state.selectedSheet || "-"} />
+        <Row label="Input Format" value={state.inputFormat === "cleaned" ? "Cleaned Table" : "Raw Data"} />
         <Row label="Data Frequency" value={state.dataFrequency ? state.dataFrequency.charAt(0).toUpperCase() + state.dataFrequency.slice(1) : "-"} />
         <Row label="Data Type" value={state.dataType.toUpperCase()} />
-        <Row
-          label="Columns"
-          value={`Date=${state.confirmedMapping?.date_col}, Customer=${state.confirmedMapping?.customer_id_col}, ARR=${state.confirmedMapping?.arr_col}`}
-        />
+        {state.inputFormat === "raw" ? (
+          <Row
+            label="Columns"
+            value={`Date=${state.confirmedMapping?.date_col}, Customer=${state.confirmedMapping?.customer_id_col}, ARR=${state.confirmedMapping?.arr_col}`}
+          />
+        ) : (
+          <Row
+            label="Columns"
+            value={`Customer=${state.customerNameCol}, ${state.dateColumns.length} date columns`}
+          />
+        )}
         <Row
           label="Output Granularity"
           value={

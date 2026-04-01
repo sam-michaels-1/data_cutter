@@ -1,5 +1,5 @@
-export { detectColumns } from './detect';
-export type { DetectResult, ColumnInfo, DetectedMapping } from './detect';
+export { detectColumns, detectTableColumns } from './detect';
+export type { DetectResult, DetectTableResult, ColumnInfo, DetectedMapping } from './detect';
 export { buildEngineConfig } from './config_builder';
 export type { BuildConfigParams } from './config_builder';
 export { generateDataPack } from './generator';

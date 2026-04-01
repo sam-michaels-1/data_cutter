@@ -17,6 +17,10 @@ export interface EngineConfig {
   scale_factor: number;
   filter_breakouts: FilterBreakout[];
   data_type: string;
+  // Cleaned table fields
+  input_format: 'raw' | 'cleaned';
+  date_columns?: string[];            // column letters with date data (cleaned path)
+  date_header_row?: number;           // row containing date headers (may differ from header row)
 }
 
 export interface FilterBreakout {

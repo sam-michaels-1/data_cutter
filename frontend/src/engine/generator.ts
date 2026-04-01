@@ -5,13 +5,15 @@
 import ExcelJS from 'exceljs';
 import type { EngineConfig, FilterBlock, CleanTabResult } from './types';
 import { getYoyOffset } from './utils';
-import { generateBaseCleanData, generateAggregatedCleanData } from './clean_data';
+import { parseHeaderDate } from './detect';
+import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFromTable } from './clean_data';
 import { generateRetentionTab } from './retention';
 import { generateCohortTab } from './cohort';
 import { generateTopCustomersTab, TOP_N } from './top_customers';
 import {
   formatControlTab, formatCleanDataTab, formatRetentionTab,
-  formatCohortTab, formatTopCustomersTab, applyFormulaColoring
+  formatCohortTab, formatTopCustomersTab, applyFormulaColoring,
+  removeGridlines, applyTabColors
 } from './formatting';
 
 function colNumFromLetter(letter: string): number {
@@ -37,7 +39,22 @@ export async function generateDataPack(
   const srcWs = srcWb.getWorksheet(config.raw_data_sheet);
   if (!srcWs) throw new Error(`Sheet "${config.raw_data_sheet}" not found`);
 
-  const { uniqueDates, uniqueCustomers } = extractUniques(srcWs, config);
+  const isCleaned = config.input_format === 'cleaned';
+
+  let uniqueDates: Date[];
+  let uniqueCustomers: string[];
+
+  if (isCleaned && config.date_columns && config.date_columns.length > 0) {
+    // For cleaned table: dates come from header row, customers from the customer ID column
+    const extracted = extractUniquesFromTable(srcWs, config);
+    uniqueDates = extracted.uniqueDates;
+    uniqueCustomers = extracted.uniqueCustomers;
+  } else {
+    const extracted = extractUniques(srcWs, config);
+    uniqueDates = extracted.uniqueDates;
+    uniqueCustomers = extracted.uniqueCustomers;
+  }
+
   log(`Found ${uniqueCustomers.length} unique customers`);
   log(`Found ${uniqueDates.length} unique time periods`);
 
@@ -48,8 +65,8 @@ export async function generateDataPack(
   log('Creating Control tab...');
   createControlTab(wb, config);
 
-  // --- Copy raw data ---
-  log('Copying raw data...');
+  // --- Copy source data ---
+  log('Copying source data...');
   copyRawData(wb, srcWb, config);
 
   // --- Determine tabs ---
@@ -59,7 +76,14 @@ export async function generateDataPack(
 
   // --- Base clean data tab ---
   log(`Generating Clean ${capitalize(granularity)} Data...`);
-  const baseResult = generateBaseCleanData(wb, config, uniqueDates, uniqueCustomers);
+  let baseResult: CleanTabResult;
+  if (isCleaned && config.date_columns && config.date_columns.length > 0) {
+    // Convert date column letters to 1-based column numbers
+    const dateColNums = config.date_columns.map(l => colNumFromLetter(l));
+    baseResult = generateCleanDataFromTable(wb, config, uniqueDates, uniqueCustomers, dateColNums);
+  } else {
+    baseResult = generateBaseCleanData(wb, config, uniqueDates, uniqueCustomers);
+  }
   cleanTabs[granularity] = baseResult;
 
   // --- Aggregated tabs ---
@@ -232,6 +256,10 @@ export async function generateDataPack(
   log('Applying formula color-coding...');
   applyFormulaColoring(wb);
 
+  // --- Post-processing: gridlines and tab colors ---
+  removeGridlines(wb);
+  applyTabColors(wb);
+
   log('Done!');
   return wb;
 }
@@ -275,11 +303,58 @@ function extractUniques(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDa
   return { uniqueDates, uniqueCustomers };
 }
 
+function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDates: Date[]; uniqueCustomers: string[] } {
+  const custColIdx = colNumFromLetter(config.customer_id_col);
+  const dateColLetters = config.date_columns || [];
+
+  // Dates come from the date header row (may differ from the main header row
+  // when findHeaderRow picked a data row instead of the actual header)
+  const dateRowNum = config.date_header_row || (config.raw_data_first_row - 1);
+  const headerRow = ws.getRow(dateRowNum);
+  const dates: Date[] = [];
+  for (const letter of dateColLetters) {
+    const colIdx = colNumFromLetter(letter);
+    const val = headerRow.getCell(colIdx).value;
+    if (val instanceof Date) {
+      dates.push(val);
+    } else if (val != null) {
+      const parsed = parseHeaderDate(String(val));
+      if (parsed) {
+        dates.push(parsed);
+      }
+    }
+  }
+  dates.sort((a, b) => a.getTime() - b.getTime());
+
+  // Customers come from the customer ID column (rows 2+)
+  // Preserve row order — important since we use direct row references
+  const customers: string[] = [];
+  const seen = new Set<string>();
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber < config.raw_data_first_row) return;
+    const val = row.getCell(custColIdx).value;
+    if (val != null) {
+      const s = String(val);
+      if (!seen.has(s)) {
+        seen.add(s);
+        customers.push(s);
+      }
+    }
+  });
+
+  return { uniqueDates: dates, uniqueCustomers: customers };
+}
+
 function createControlTab(wb: ExcelJS.Workbook, config: EngineConfig): void {
   const ws = wb.addWorksheet('Control');
 
   ws.getCell(3, 2).value = 'Raw Data Type:';
   ws.getCell(3, 3).value = (config.data_type || 'arr') === 'arr' ? 'ARR' : 'Revenue';
+
+  if (config.input_format === 'cleaned') {
+    ws.getCell(8, 2).value = 'Input Format:';
+    ws.getCell(8, 3).value = 'Cleaned Table';
+  }
 
   ws.getCell(4, 2).value = 'Scale Factor (Divide By):';
   ws.getCell(4, 3).value = config.scale_factor;

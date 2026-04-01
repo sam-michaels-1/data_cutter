@@ -4,6 +4,7 @@
  */
 import type { Workbook, Worksheet, Style } from 'exceljs';
 import type { FilterBlock } from './types';
+import { colLetter } from './utils';
 
 // Number formats
 const NF_DOLLAR = '* _(* "$"\\ #,##0_);_(* "$"\\ \\(#,##0\\);* \\-_);* @_)';
@@ -39,6 +40,20 @@ function setAlign(ws: Worksheet, row: number, col: number, horizontal: 'left' | 
   ws.getCell(row, col).alignment = { horizontal };
 }
 
+function formatUnitsCell(ws: Worksheet, row: number, labelCol: number, valueCol: number): void {
+  setFont(ws, row, labelCol, true);
+  const cell = ws.getCell(row, valueCol);
+  cell.font = { name: 'Times New Roman', size: 10, italic: true, color: { argb: GREEN_COLOR } };
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
+  cell.numFmt = '"$ "#,##0';
+  cell.border = {
+    top: { style: 'dotted' },
+    bottom: { style: 'dotted' },
+    left: { style: 'dotted' },
+    right: { style: 'dotted' },
+  };
+}
+
 export function formatControlTab(ws: Worksheet, checkTabs?: [string, string][]): void {
   // Set base font for all populated cells
   ws.eachRow({ includeEmpty: false }, (row) => {
@@ -58,6 +73,17 @@ export function formatControlTab(ws: Worksheet, checkTabs?: [string, string][]):
     cell.font = { name: 'Times New Roman', size: 10, color: { argb: BLUE_COLOR } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
     cell.alignment = { horizontal: 'center' };
+  }
+
+  // Row 8: Input Format (if present — only for cleaned table inputs)
+  if (ws.getCell(8, 2).value) {
+    setFont(ws, 8, 2, true);
+  }
+  if (ws.getCell(8, 3).value) {
+    const cell8 = ws.getCell(8, 3);
+    cell8.font = { name: 'Times New Roman', size: 10, color: { argb: BLUE_COLOR } };
+    cell8.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
+    cell8.alignment = { horizontal: 'center' };
   }
 
   // Column widths
@@ -158,7 +184,7 @@ export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').Clea
   }
 
   // Freeze panes
-  ws.views = [{ state: 'frozen', xSplit: layout.arr_start - 1, ySplit: firstDataRow - 1 }];
+  ws.views = [{ state: 'frozen', xSplit: layout.arr_start - 1, ySplit: firstDataRow - 1, showGridLines: false }];
 }
 
 export function formatRetentionTab(
@@ -180,7 +206,10 @@ export function formatRetentionTab(
   }
 
   // Freeze panes
-  ws.views = [{ state: 'frozen', xSplit: s1Start - 1, ySplit: 7 }];
+  ws.views = [{ state: 'frozen', xSplit: s1Start - 1, ySplit: 7, showGridLines: false }];
+
+  // Units cell
+  formatUnitsCell(ws, 3, 1, filterStart);
 
   for (let blockIdx = 0; blockIdx < filterBlocks.length; blockIdx++) {
     const start = 5 + blockIdx * 19;
@@ -229,16 +258,16 @@ export function formatRetentionTab(
       }
     }
 
-    // Filter values center
+    // Filter values center + blue on first row
     for (let attrIdx = 0; attrIdx < numAttrs; attrIdx++) {
       const fc = filterStart + attrIdx;
-      setFont(ws, rBop, fc, true);
+      setFont(ws, rBop, fc, true, BLUE_COLOR);
       setAlign(ws, rBop, fc, 'center');
       for (let r = rChurn; r <= rNlGrowth; r++) {
         setAlign(ws, r, fc, 'center');
       }
     }
-    setFont(ws, rBop, cohortFc, true);
+    setFont(ws, rBop, cohortFc, true, BLUE_COLOR);
     setAlign(ws, rBop, cohortFc, 'center');
 
     // Section 1 formatting
@@ -287,6 +316,52 @@ export function formatRetentionTab(
         setAlign(ws, r, c, 'right');
       }
     }
+
+    // Indent sub-item labels in section 1
+    for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rNetRet]) {
+      const cell = ws.getCell(r, s1Label);
+      cell.alignment = { ...cell.alignment, indent: 1 };
+    }
+
+    // Indent sub-item labels in section 2 (Churned, New Logo, % Growth)
+    for (const r of [rChurn, rUpsell, rNewLogo]) {
+      const cell = ws.getCell(r, s2Label);
+      cell.alignment = { ...cell.alignment, indent: 1 };
+    }
+
+    // Indent sub-item labels in section 3 (Churned, Upsell/Cross-sell, New Logo, % Growth)
+    for (const r of [rChurn, rDownsell, rRetained, rEop]) {
+      const cell = ws.getCell(r, s3Label);
+      cell.alignment = { ...cell.alignment, indent: 1 };
+    }
+
+    // Italicize the 5 percentage rows across all section 1 columns
+    for (const r of [rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) {
+      for (let c = 1; c <= maxCol; c++) {
+        const cell = ws.getCell(r, c);
+        cell.font = { ...cell.font, italic: true };
+      }
+    }
+
+    // Italicize % Growth row in section 2 (label + data)
+    {
+      const cell = ws.getCell(rNewLogo, s2Label);
+      cell.font = { ...cell.font, italic: true };
+      for (let c = s2Start; c <= s2End; c++) {
+        const dc = ws.getCell(rNewLogo, c);
+        dc.font = { ...dc.font, italic: true };
+      }
+    }
+
+    // Italicize % Growth ARR/Cust. row in section 3 (label + data)
+    {
+      const cell = ws.getCell(rEop, s3Label);
+      cell.font = { ...cell.font, italic: true };
+      for (let c = s3Start; c <= s3End; c++) {
+        const dc = ws.getCell(rEop, c);
+        dc.font = { ...dc.font, italic: true };
+      }
+    }
   }
 }
 
@@ -300,6 +375,10 @@ export function formatCohortTab(
   _granularity: string
 ): void {
   const maxCol = s4DataEnd;
+  const s3DataEnd = s3DataStart + numDates - 1;
+
+  // Units cell
+  formatUnitsCell(ws, 3, 1, qCol);
 
   for (let blockIdx = 0; blockIdx < filterBlocks.length; blockIdx++) {
     const blockStart = 6 + blockIdx * (numCohorts + 9);
@@ -351,6 +430,12 @@ export function formatCohortTab(
       setAlign(ws, rHeaders, s4DataStart + i, 'center');
     }
 
+    // Blue font on first cohort row filter values
+    for (let attrIdx = 0; attrIdx < numAttrs; attrIdx++) {
+      setFont(ws, firstCohortRow, filterStart + attrIdx, true, BLUE_COLOR);
+    }
+    setFont(ws, firstCohortRow, cohortLabelCol, false, BLUE_COLOR);
+
     // Data rows
     for (let r = firstCohortRow; r <= rCheck; r++) {
       setAlign(ws, r, qCol, 'center');
@@ -374,10 +459,112 @@ export function formatCohortTab(
       }
     }
 
-    // Bold total row
+    // Total row: bold only (NOT italic), $ format for ARR section
     for (let c = 1; c <= maxCol; c++) {
-      if (ws.getCell(rTotal, c).value != null) setFont(ws, rTotal, c, true);
+      if (ws.getCell(rTotal, c).value != null) {
+        setFont(ws, rTotal, c, true);
+      }
     }
+    for (let i = 0; i < numDates; i++) {
+      setNumFmt(ws, rTotal, s1Start + i, NF_DOLLAR);
+    }
+
+    // Average/Median/Weighted: bold + italic across retention data columns
+    for (const r of [rTotal, rMedian, rWeighted]) {
+      // Italic on retention section labels and data (s3 and s4)
+      for (let c = s3Label; c <= s4DataEnd; c++) {
+        const cell = ws.getCell(r, c);
+        if (cell.value != null) {
+          cell.font = { ...baseFont(true), italic: true, color: cell.font?.color };
+        }
+      }
+    }
+    // Median and Weighted rows: bold + italic across ALL columns
+    for (const r of [rMedian, rWeighted]) {
+      for (let c = 1; c <= maxCol; c++) {
+        if (ws.getCell(r, c).value != null) {
+          const cell = ws.getCell(r, c);
+          cell.font = { ...baseFont(true), italic: true, color: cell.font?.color };
+        }
+      }
+    }
+
+    // Bold "Cohort" label in retention sections
+    setFont(ws, rHeaders, s3Label, true);
+    setAlign(ws, rHeaders, s3Label, 'center');
+    setFont(ws, rHeaders, s4Label, true);
+    setAlign(ws, rHeaders, s4Label, 'center');
+
+    // Left-align summary labels in retention sections
+    for (const r of [rTotal, rMedian, rWeighted]) {
+      ws.getCell(r, s3Label).alignment = { horizontal: 'left' };
+      ws.getCell(r, s4Label).alignment = { horizontal: 'left' };
+    }
+
+    // Borders: underline under section headers and column headers, top border above Total
+    const thinBorder = { style: 'thin' as const };
+    const s1End = s1Start + numDates - 1;
+    const s2End = s2Start + numDates - 1;
+    const sectionRanges: [number, number][] = [
+      [s1Start, s1End],
+      [s2Start, s2End],
+      [s3Label, s3DataEnd],
+      [s4Label, s4DataEnd],
+    ];
+    for (const [startC, endC] of sectionRanges) {
+      // Bottom border under section headers row
+      for (let c = startC; c <= endC; c++) {
+        ws.getCell(rSectionHeaders, c).border = { ...ws.getCell(rSectionHeaders, c).border, bottom: thinBorder };
+      }
+      // Bottom border under column headers row
+      for (let c = startC; c <= endC; c++) {
+        ws.getCell(rHeaders, c).border = { ...ws.getCell(rHeaders, c).border, bottom: thinBorder };
+      }
+      // Top border above Total row
+      for (let c = startC; c <= endC; c++) {
+        ws.getCell(rTotal, c).border = { ...ws.getCell(rTotal, c).border, top: thinBorder };
+      }
+    }
+
+    // Conditional formatting — ARR Retention: 3-color (red min, white at 1.0, green max)
+    const s3TopLeft = `${colLetter(s3DataStart)}${firstCohortRow}`;
+    const s3BotRight = `${colLetter(s3DataEnd)}${lastCohortRow}`;
+    ws.addConditionalFormatting({
+      ref: `${s3TopLeft}:${s3BotRight}`,
+      rules: [{
+        type: 'colorScale',
+        priority: 1,
+        cfvo: [
+          { type: 'min' },
+          { type: 'num', value: 1.0 },
+          { type: 'max' },
+        ],
+        color: [
+          { argb: 'FFF8696B' },
+          { argb: 'FFFFFFFF' },
+          { argb: 'FF63BE7B' },
+        ],
+      } as any],
+    });
+
+    // Conditional formatting — Logo Retention: 2-color (yellow min, green max)
+    const s4TopLeft = `${colLetter(s4DataStart)}${firstCohortRow}`;
+    const s4BotRight = `${colLetter(s4DataEnd)}${lastCohortRow}`;
+    ws.addConditionalFormatting({
+      ref: `${s4TopLeft}:${s4BotRight}`,
+      rules: [{
+        type: 'colorScale',
+        priority: 1,
+        cfvo: [
+          { type: 'min' },
+          { type: 'max' },
+        ],
+        color: [
+          { argb: 'FFFFEB84' },
+          { argb: 'FF63BE7B' },
+        ],
+      } as any],
+    });
   }
 
   // Base font pass
@@ -406,6 +593,9 @@ export function formatTopCustomersTab(
       cell.font = baseFont();
     });
   });
+
+  // Units cell
+  formatUnitsCell(ws, 3, 1, rankNumCol);
 
   // Row 5: Section headers
   setFont(ws, 5, s1Start, true); setAlign(ws, 5, s1Start, 'centerContinuous');
@@ -504,5 +694,44 @@ export function applyFormulaColoring(wb: Workbook, skipSheets?: string[]): void 
         }
       });
     });
+  }
+}
+
+/**
+ * Remove gridlines from every worksheet.
+ */
+export function removeGridlines(wb: Workbook): void {
+  for (const ws of wb.worksheets) {
+    if (ws.views && ws.views.length > 0) {
+      ws.views = ws.views.map(v => ({ ...v, showGridLines: false }));
+    } else {
+      ws.views = [{ showGridLines: false }];
+    }
+  }
+}
+
+/**
+ * Apply pastel tab colors by section.
+ */
+export function applyTabColors(wb: Workbook): void {
+  const colorMap: [RegExp | string, string][] = [
+    ['Control', '92D050'],
+    [/Retention/, '5B9BD5'],
+    [/Cohort/, 'FFD966'],
+    [/Top Customer/, 'F4B084'],
+    [/^Clean/, 'C0C0C0'],
+  ];
+
+  for (const ws of wb.worksheets) {
+    for (const [pattern, color] of colorMap) {
+      const match = typeof pattern === 'string'
+        ? ws.name === pattern
+        : pattern.test(ws.name);
+      if (match) {
+        (ws as any).properties = (ws as any).properties || {};
+        (ws as any).properties.tabColor = { argb: `FF${color}` };
+        break;
+      }
+    }
   }
 }

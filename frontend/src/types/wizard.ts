@@ -30,6 +30,7 @@ export interface DetectColumnsResponse {
   row_count: number;
   auto_scale_factor: number;
   detected_frequency: string | null;
+  header_row: number;
 }
 
 export interface ColumnMapping {
@@ -52,6 +53,12 @@ export interface GenerateRequest {
   attributes: AttributeSelection[];
   output_granularities: string[];
   fiscal_year_end_month: number;
+  // Cleaned table fields
+  input_format?: InputFormat;
+  date_columns?: string[];
+  customer_name_col?: string | null;
+  header_row?: number;
+  date_header_row?: number;
 }
 
 export interface GenerateResponse {
@@ -63,14 +70,17 @@ export interface GenerateResponse {
 export type DataType = "arr" | "revenue";
 export type DataFrequency = "monthly" | "quarterly";
 export type Granularity = "monthly" | "quarterly" | "annual";
+export type InputFormat = "raw" | "cleaned";
 
 export interface WizardState {
   currentStep: number;
-  // Step 1
+  // Step 1: Upload
   sessionId: string | null;
   filename: string | null;
   sheetNames: string[];
   selectedSheet: string | null;
+  // Step 2: Input Format + Detection
+  inputFormat: InputFormat;
   columns: ColumnInfo[];
   detectedMapping: DetectedMapping | null;
   confirmedMapping: ColumnMapping | null;
@@ -78,16 +88,22 @@ export interface WizardState {
   scaleFactor: number;
   rowCount: number;
   detectedFrequency: DataFrequency | null;
-  // Step 2
+  // Cleaned-table specific
+  dateColumns: string[];
+  customerNameCol: string | null;
+  dateHeaderRow: number | null;  // row with date headers (if different from headerRow)
+  // Shared: which row the headers were found in
+  headerRow: number;
+  // Step 3: Frequency
   dataFrequency: DataFrequency | null;
-  // Step 3
+  // Step 4: Data Type
   dataType: DataType;
-  // Step 4
+  // Step 5: Granularity
   outputGranularities: Granularity[];
   fiscalYearEndMonth: number;
-  // Step 5
+  // Step 6: Identifiers
   selectedAttributes: AttributeSelection[];
-  // Step 6
+  // Step 7: Review
   downloadId: string | null;
   isGenerating: boolean;
   // Shared

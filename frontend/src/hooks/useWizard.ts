@@ -4,6 +4,7 @@ import type {
   DataType,
   DataFrequency,
   Granularity,
+  InputFormat,
   ColumnMapping,
   AttributeSelection,
   DetectedMapping,
@@ -17,6 +18,7 @@ const INITIAL_STATE: WizardState = {
   filename: null,
   sheetNames: [],
   selectedSheet: null,
+  inputFormat: "raw",
   columns: [],
   detectedMapping: null,
   confirmedMapping: null,
@@ -24,6 +26,10 @@ const INITIAL_STATE: WizardState = {
   scaleFactor: 1,
   rowCount: 0,
   detectedFrequency: null,
+  dateColumns: [],
+  customerNameCol: null,
+  dateHeaderRow: null,
+  headerRow: 1,
   dataFrequency: null,
   dataType: "arr",
   outputGranularities: [],
@@ -43,6 +49,7 @@ type Action =
       filename: string;
       sheetNames: string[];
     }
+  | { type: "SET_INPUT_FORMAT"; format: InputFormat }
   | {
       type: "DETECT_SUCCESS";
       columns: ColumnInfo[];
@@ -51,9 +58,23 @@ type Action =
       scaleFactor: number;
       rowCount: number;
       detectedFrequency: DataFrequency | null;
+      headerRow: number;
+    }
+  | {
+      type: "DETECT_TABLE_SUCCESS";
+      columns: ColumnInfo[];
+      dateColumns: string[];
+      customerNameCol: string;
+      attributes: AttributeCol[];
+      scaleFactor: number;
+      rowCount: number;
+      detectedFrequency: DataFrequency | null;
+      headerRow: number;
+      dateHeaderRow?: number;
     }
   | { type: "SET_SHEET"; sheet: string }
   | { type: "SET_CONFIRMED_MAPPING"; mapping: ColumnMapping }
+  | { type: "SET_CUSTOMER_NAME_COL"; col: string }
   | { type: "SET_DATA_FREQUENCY"; dataFrequency: DataFrequency }
   | { type: "SET_DATA_TYPE"; dataType: DataType }
   | { type: "TOGGLE_GRANULARITY"; granularity: Granularity }
@@ -66,6 +87,12 @@ type Action =
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "SET_ERROR"; error: string | null }
   | { type: "RESET" };
+
+function granularitiesForFrequency(freq: DataFrequency | null): Granularity[] {
+  if (freq === "monthly") return ["monthly", "quarterly", "annual"];
+  if (freq === "quarterly") return ["quarterly", "annual"];
+  return [];
+}
 
 function reducer(state: WizardState, action: Action): WizardState {
   switch (action.type) {
@@ -80,6 +107,22 @@ function reducer(state: WizardState, action: Action): WizardState {
         sheetNames: action.sheetNames,
         isLoading: false,
         error: null,
+      };
+
+    case "SET_INPUT_FORMAT":
+      return {
+        ...state,
+        inputFormat: action.format,
+        // Reset detection state when format changes
+        columns: [],
+        detectedMapping: null,
+        confirmedMapping: null,
+        detectedAttributes: [],
+        dateColumns: [],
+        customerNameCol: null,
+        scaleFactor: 1,
+        rowCount: 0,
+        detectedFrequency: null,
       };
 
     case "SET_SHEET":
@@ -101,6 +144,27 @@ function reducer(state: WizardState, action: Action): WizardState {
         rowCount: action.rowCount,
         detectedFrequency: freq,
         dataFrequency: freq,
+        outputGranularities: granularitiesForFrequency(freq),
+        headerRow: action.headerRow,
+        isLoading: false,
+      };
+    }
+
+    case "DETECT_TABLE_SUCCESS": {
+      const freq = action.detectedFrequency;
+      return {
+        ...state,
+        columns: action.columns,
+        dateColumns: action.dateColumns,
+        customerNameCol: action.customerNameCol,
+        detectedAttributes: action.attributes,
+        scaleFactor: action.scaleFactor,
+        rowCount: action.rowCount,
+        detectedFrequency: freq,
+        dataFrequency: freq,
+        outputGranularities: granularitiesForFrequency(freq),
+        headerRow: action.headerRow,
+        dateHeaderRow: action.dateHeaderRow ?? null,
         isLoading: false,
       };
     }
@@ -108,8 +172,15 @@ function reducer(state: WizardState, action: Action): WizardState {
     case "SET_CONFIRMED_MAPPING":
       return { ...state, confirmedMapping: action.mapping };
 
+    case "SET_CUSTOMER_NAME_COL":
+      return { ...state, customerNameCol: action.col };
+
     case "SET_DATA_FREQUENCY":
-      return { ...state, dataFrequency: action.dataFrequency };
+      return {
+        ...state,
+        dataFrequency: action.dataFrequency,
+        outputGranularities: granularitiesForFrequency(action.dataFrequency),
+      };
 
     case "SET_DATA_TYPE":
       return { ...state, dataType: action.dataType };

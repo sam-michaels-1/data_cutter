@@ -3,6 +3,7 @@ import { useWizard } from "../hooks/useWizard";
 import { useSession } from "../components/SessionProvider";
 import StepIndicator from "../components/ui/StepIndicator";
 import UploadStep from "../components/steps/UploadStep";
+import InputFormatStep from "../components/steps/InputFormatStep";
 import FrequencyStep from "../components/steps/FrequencyStep";
 import DataTypeStep from "../components/steps/DataTypeStep";
 import GranularityStep from "../components/steps/GranularityStep";
@@ -17,16 +18,22 @@ export default function ImportPage() {
   const canProceed = (() => {
     switch (state.currentStep) {
       case 1:
-        return !!(state.sessionId && state.selectedSheet && state.confirmedMapping);
+        return !!(state.sessionId && state.selectedSheet);
       case 2:
-        return !!state.dataFrequency;
+        // Format step: raw needs confirmed mapping, cleaned needs date columns + customer col
+        if (state.inputFormat === "raw") {
+          return !!state.confirmedMapping;
+        }
+        return state.dateColumns.length > 0 && !!state.customerNameCol;
       case 3:
-        return !!state.dataType;
+        return !!state.dataFrequency;
       case 4:
-        return state.outputGranularities.length > 0;
+        return !!state.dataType;
       case 5:
-        return true;
+        return state.outputGranularities.length > 0;
       case 6:
+        return true;
+      case 7:
         return false;
       default:
         return false;
@@ -45,14 +52,16 @@ export default function ImportPage() {
       case 1:
         return <UploadStep state={state} dispatch={dispatch} />;
       case 2:
-        return <FrequencyStep state={state} dispatch={dispatch} />;
+        return <InputFormatStep state={state} dispatch={dispatch} />;
       case 3:
-        return <DataTypeStep state={state} dispatch={dispatch} />;
+        return <FrequencyStep state={state} dispatch={dispatch} />;
       case 4:
-        return <GranularityStep state={state} dispatch={dispatch} />;
+        return <DataTypeStep state={state} dispatch={dispatch} />;
       case 5:
-        return <IdentifiersStep state={state} dispatch={dispatch} />;
+        return <GranularityStep state={state} dispatch={dispatch} />;
       case 6:
+        return <IdentifiersStep state={state} dispatch={dispatch} />;
+      case 7:
         return (
           <ReviewStep
             state={state}
@@ -99,7 +108,7 @@ export default function ImportPage() {
           Back
         </button>
 
-        {state.currentStep < 6 && (
+        {state.currentStep < 7 && (
           <button
             onClick={nextStep}
             disabled={!canProceed}

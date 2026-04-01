@@ -8,7 +8,7 @@ import { colNum } from './utils';
 /**
  * Auto-detect the raw data frequency by examining date intervals.
  */
-function detectRawDataFrequency(wb: Workbook, sheetName: string, dateCol: string): string {
+function detectRawDataFrequency(wb: Workbook, sheetName: string, dateCol: string, headerRow = 1): string {
   const ws = wb.getWorksheet(sheetName);
   if (!ws) return 'annual';
 
@@ -16,7 +16,7 @@ function detectRawDataFrequency(wb: Workbook, sheetName: string, dateCol: string
   const dates: Date[] = [];
 
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return;
+    if (rowNumber <= headerRow) return;
     const val = row.getCell(colIdx).value;
     if (val instanceof Date) {
       dates.push(val);
@@ -43,7 +43,7 @@ function detectRawDataFrequency(wb: Workbook, sheetName: string, dateCol: string
 /**
  * Read unique values from a column (for auto-generating filter breakouts).
  */
-function getUniqueValues(wb: Workbook, sheetName: string, colLetterStr: string, maxUnique = 50): string[] {
+function getUniqueValues(wb: Workbook, sheetName: string, colLetterStr: string, maxUnique = 50, headerRow = 1): string[] {
   const ws = wb.getWorksheet(sheetName);
   if (!ws) return [];
 
@@ -51,7 +51,7 @@ function getUniqueValues(wb: Workbook, sheetName: string, colLetterStr: string, 
   const values = new Set<string>();
 
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return;
+    if (rowNumber <= headerRow) return;
     if (values.size >= maxUnique) return;
     const val = row.getCell(colIdx).value;
     if (val == null) return;
@@ -75,6 +75,11 @@ export interface BuildConfigParams {
   rowCount: number;
   scaleFactor: number;
   dataFrequency?: string;
+  // Cleaned table fields
+  inputFormat?: 'raw' | 'cleaned';
+  dateColumns?: string[];
+  headerRow?: number;
+  dateHeaderRow?: number;
 }
 
 /**
@@ -85,6 +90,7 @@ export function buildEngineConfig(params: BuildConfigParams): EngineConfig {
     wb, sheetName, dataType, dateCol, customerIdCol, arrCol,
     attributes, outputGranularities, fiscalYearEndMonth,
     rowCount, scaleFactor, dataFrequency,
+    inputFormat, dateColumns, headerRow, dateHeaderRow,
   } = params;
 
   // Build ordered attributes dict
@@ -94,13 +100,13 @@ export function buildEngineConfig(params: BuildConfigParams): EngineConfig {
   }
 
   // Use user-provided frequency override if available, otherwise auto-detect
-  const rawFreq = dataFrequency || detectRawDataFrequency(wb, sheetName, dateCol);
+  const rawFreq = dataFrequency || detectRawDataFrequency(wb, sheetName, dateCol, headerRow);
 
   // Auto-generate filter breakouts from the first attribute
   const filterBreakouts: { title: string; filters: Record<string, string> }[] = [];
   if (attributes.length > 0) {
     const firstAttr = attributes[0];
-    const uniqueVals = getUniqueValues(wb, sheetName, firstAttr.letter);
+    const uniqueVals = getUniqueValues(wb, sheetName, firstAttr.letter, 50, headerRow);
     for (const val of uniqueVals) {
       filterBreakouts.push({
         title: val,
@@ -111,8 +117,8 @@ export function buildEngineConfig(params: BuildConfigParams): EngineConfig {
 
   return {
     raw_data_sheet: sheetName,
-    raw_data_first_row: 2,
-    raw_data_last_row: rowCount + 1,  // +1 because row 1 is the header
+    raw_data_first_row: (headerRow || 1) + 1,  // data starts one row after headers
+    raw_data_last_row: rowCount + (headerRow || 1),  // rowCount data rows after header
     customer_id_col: customerIdCol,
     date_col: dateCol,
     arr_col: arrCol,
@@ -123,5 +129,8 @@ export function buildEngineConfig(params: BuildConfigParams): EngineConfig {
     scale_factor: scaleFactor,
     filter_breakouts: filterBreakouts,
     data_type: dataType,
+    input_format: inputFormat || 'raw',
+    date_columns: dateColumns,
+    date_header_row: dateHeaderRow,
   };
 }

@@ -9,7 +9,8 @@ import type {
   GenerateRequest,
   GenerateResponse,
 } from "../types/wizard";
-import { detectColumns as engineDetect } from "../engine/detect";
+import { detectColumns as engineDetect, detectTableColumns as engineDetectTable } from "../engine/detect";
+import type { DetectTableResult } from "../engine/detect";
 import { buildEngineConfig } from "../engine/config_builder";
 import { generateDataPack } from "../engine/generator";
 
@@ -57,13 +58,24 @@ export async function detectColumns(
     row_count: result.row_count,
     auto_scale_factor: result.auto_scale_factor,
     detected_frequency: result.detected_frequency,
+    header_row: result.header_row,
   };
+}
+
+export async function detectTableCols(
+  _sessionId: string,
+  sheetName: string
+): Promise<DetectTableResult> {
+  if (!currentWorkbook) throw new Error("No workbook loaded");
+  return engineDetectTable(currentWorkbook, sheetName);
 }
 
 export async function generate(
   req: GenerateRequest
 ): Promise<GenerateResponse> {
   if (!currentWorkbook) throw new Error("No workbook loaded");
+
+  const isCleaned = req.input_format === 'cleaned';
 
   // Build engine config
   const config = buildEngineConfig({
@@ -81,22 +93,37 @@ export async function generate(
       : 0,
     scaleFactor: 1, // Will be overridden below
     dataFrequency: req.data_frequency || undefined,
+    inputFormat: req.input_format || 'raw',
+    dateColumns: req.date_columns,
+    headerRow: req.header_row,
+    dateHeaderRow: req.date_header_row,
   });
 
-  // Detect the actual row count by checking the raw data
+  // Detect the actual row count by checking the data rows
   const ws = currentWorkbook.getWorksheet(req.sheet_name);
+  const hRow = req.header_row || 1;
   if (ws) {
     let rowCount = 0;
     ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-      if (rowNumber > 1 && row.getCell(1).value != null) rowCount++;
+      if (rowNumber <= hRow) return; // skip header and anything above
+      // Check if the row has any data (don't assume column 1)
+      let hasData = false;
+      row.eachCell({ includeEmpty: false }, (cell) => {
+        if (cell.value != null) hasData = true;
+      });
+      if (hasData) rowCount++;
     });
-    config.raw_data_last_row = rowCount + 1;
+    config.raw_data_last_row = rowCount + hRow;
   }
 
-  // Get scale factor from detection (stored in the wizard state, passed indirectly)
-  // We'll re-detect it from the workbook
-  const detectResult = engineDetect(currentWorkbook, req.sheet_name);
-  config.scale_factor = detectResult.auto_scale_factor;
+  // Get scale factor from detection
+  if (isCleaned) {
+    const detectResult = engineDetectTable(currentWorkbook, req.sheet_name);
+    config.scale_factor = detectResult.auto_scale_factor;
+  } else {
+    const detectResult = engineDetect(currentWorkbook, req.sheet_name);
+    config.scale_factor = detectResult.auto_scale_factor;
+  }
 
   currentConfig = config;
 
