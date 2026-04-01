@@ -1,6 +1,6 @@
 /**
- * Client-side API replacement.
- * All operations now happen in-browser using ExcelJS and the local engine.
+ * API client — handles file upload, column detection, and workbook generation
+ * using ExcelJS and the local engine (all in-browser).
  */
 import ExcelJS from "exceljs";
 import type {

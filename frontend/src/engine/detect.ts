@@ -1,9 +1,9 @@
 /**
  * Auto-detection service.
- * Reads sheet data and infers column types, scale factor, etc.
- * Port of backend/services/detect.py for client-side use.
+ * Reads sheet data and infers column types, scale factor, and data frequency.
  */
 import type { Workbook } from 'exceljs';
+import { colLetter } from './utils';
 
 const SAMPLE_ROWS = 50;
 
@@ -28,25 +28,6 @@ export interface DetectResult {
   detected_frequency: string;
 }
 
-function colLetterFromNum(n: number): string {
-  let result = '';
-  let num = n;
-  while (num > 0) {
-    num--;
-    result = String.fromCharCode(65 + (num % 26)) + result;
-    num = Math.floor(num / 26);
-  }
-  return result;
-}
-
-function colNumFromLetter(letter: string): number {
-  let result = 0;
-  for (let i = 0; i < letter.length; i++) {
-    result = result * 26 + (letter.toUpperCase().charCodeAt(i) - 64);
-  }
-  return result;
-}
-
 function isDate(v: unknown): boolean {
   return v instanceof Date && !isNaN(v.getTime());
 }
@@ -59,12 +40,6 @@ function isNumeric(v: unknown): boolean {
     return cleaned !== '' && !isNaN(Number(cleaned));
   }
   return false;
-}
-
-function toNumber(v: unknown): number {
-  if (typeof v === 'number') return v;
-  if (typeof v === 'string') return parseFloat(v.replace(/,/g, ''));
-  return 0;
 }
 
 /**
@@ -100,7 +75,7 @@ export function detectColumns(wb: Workbook, sheetName: string): DetectResult {
     if (cell.value != null) {
       headers.push({
         col_num: colNumber,
-        letter: colLetterFromNum(colNumber),
+        letter: colLetter(colNumber),
         header: String(cell.value).trim(),
       });
     }

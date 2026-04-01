@@ -379,8 +379,6 @@ export function generateAggregatedCleanData(
 
   for (let idx = 0; idx < uniqueCustomers.length; idx++) {
     const row = firstDataRow + idx;
-    const custIdCl = colLetter(layout.cust_id);
-
     // Customer ID: reference source
     ws.getCell(row, layout.cust_id).value = {
       formula: `'${sourceSheet}'!${colLetter(sourceLayout.cust_id)}${row}`

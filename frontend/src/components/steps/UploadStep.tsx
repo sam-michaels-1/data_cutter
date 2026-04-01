@@ -30,7 +30,7 @@ export default function UploadStep({ state, dispatch }: Props) {
       } catch (err: any) {
         dispatch({
           type: "SET_ERROR",
-          error: err?.response?.data?.detail || "Upload failed",
+          error: err instanceof Error ? err.message : "Upload failed",
         });
       }
     },
@@ -56,7 +56,7 @@ export default function UploadStep({ state, dispatch }: Props) {
       } catch (err: any) {
         dispatch({
           type: "SET_ERROR",
-          error: err?.response?.data?.detail || "Detection failed",
+          error: err instanceof Error ? err.message : "Detection failed",
         });
       }
     },

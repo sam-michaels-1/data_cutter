@@ -1,10 +1,9 @@
 /**
  * Formatting module for all Data Pack tabs.
- * Port of data-pack-app/engine/formatting.py for ExcelJS.
+ * Applies fonts, number formats, alignment, borders, and conditional formatting.
  */
 import type { Workbook, Worksheet, Style } from 'exceljs';
 import type { FilterBlock } from './types';
-import { colLetter } from './utils';
 
 // Number formats
 const NF_DOLLAR = '* _(* "$"\\ #,##0_);_(* "$"\\ \\(#,##0\\);* \\-_);* @_)';
@@ -96,7 +95,7 @@ export function formatControlTab(ws: Worksheet, checkTabs?: [string, string][]):
           style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'C6EFCE' } } },
         },
         {
-          type: 'cellIs', operator: 'notEqual', formulae: ['0'], priority: 2,
+          type: 'cellIs', operator: 'notEqual' as any, formulae: ['0'], priority: 2,
           style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFC7CE' } } },
         },
       ],
@@ -163,7 +162,7 @@ export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').Clea
 }
 
 export function formatRetentionTab(
-  ws: Worksheet, config: import('./types').EngineConfig, filterBlocks: FilterBlock[],
+  ws: Worksheet, _config: import('./types').EngineConfig, filterBlocks: FilterBlock[],
   numDerived: number, numAttrs: number,
   s1Label: number, s1Start: number, s1End: number,
   s2Label: number, s2Start: number, s2End: number,
@@ -295,8 +294,8 @@ export function formatCohortTab(
   ws: Worksheet, _config: import('./types').EngineConfig, filterBlocks: FilterBlock[],
   numDates: number, numCohorts: number, numAttrs: number,
   qCol: number, yCol: number, filterStart: number, cohortLabelCol: number,
-  s1Start: number, s1End: number, s2Start: number, s2End: number,
-  s3Label: number, s3StartVal: number, s3DataStart: number, s3DataEnd: number,
+  s1Start: number, _s1End: number, s2Start: number, _s2End: number,
+  s3Label: number, s3StartVal: number, s3DataStart: number, _s3DataEnd: number,
   s4Label: number, s4StartVal: number, s4DataStart: number, s4DataEnd: number,
   _granularity: string
 ): void {
@@ -397,7 +396,7 @@ export function formatTopCustomersTab(
   rTopTotal: number, rOther: number, rTotal: number, rMemoStart: number,
   numDates: number,
   rankNumCol: number, custIdCol: number, attrStart: number, numAttrs: number, cohortCol: number,
-  s1Start: number, s1End: number, s2Start: number, s2End: number, s3Start: number, s3End: number
+  s1Start: number, _s1End: number, s2Start: number, _s2End: number, s3Start: number, s3End: number
 ): void {
   const maxCol = s3End;
 

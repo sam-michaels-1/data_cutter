@@ -1,11 +1,11 @@
 /**
  * Retention tab generators.
- * Port of data-pack-app/engine/retention.py for client-side use with ExcelJS.
+ * Builds Lost-only, Punitive, and Net Dollar Retention metric tabs.
  */
 import type { Workbook } from 'exceljs';
 import type { EngineConfig, FilterBlock } from './types';
 import type { CleanLayout } from './utils';
-import { colLetter, getYoyOffset } from './utils';
+import { colLetter } from './utils';
 
 const BLOCK_HEIGHT = 19;
 
@@ -75,12 +75,12 @@ export function generateRetentionTab(
 
 function writeRetentionBlock(
   ws: import('exceljs').Worksheet, start: number, block: FilterBlock,
-  config: EngineConfig,
+  _config: EngineConfig,
   cleanSheet: string, cleanLayout: CleanLayout,
   cdrFirst: number, cdrLast: number,
-  s1Label: number, s1Start: number, s1End: number,
-  s2Label: number, s2Start: number, s2End: number,
-  s3Label: number, s3Start: number, s3End: number,
+  s1Label: number, s1Start: number, _s1End: number,
+  s2Label: number, s2Start: number, _s2End: number,
+  s3Label: number, s3Start: number, _s3End: number,
   filterStart: number, cohortFc: number,
   numDerived: number, numAttrs: number, attrNames: string[],
   unitsCell: string, yoyOffset: number, granularity: string,

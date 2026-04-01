@@ -1,10 +1,10 @@
 /**
  * Main orchestrator for the Data Pack Excel generator.
- * Port of data-pack-app/engine/generator.py for client-side use with ExcelJS.
+ * Coordinates all tab generation (clean data, retention, cohort, top customers).
  */
 import ExcelJS from 'exceljs';
 import type { EngineConfig, FilterBlock, CleanTabResult } from './types';
-import { getYoyOffset, computeCleanLayout, colLetter } from './utils';
+import { getYoyOffset } from './utils';
 import { generateBaseCleanData, generateAggregatedCleanData } from './clean_data';
 import { generateRetentionTab } from './retention';
 import { generateCohortTab } from './cohort';
@@ -461,7 +461,7 @@ function reorderSheets(wb: ExcelJS.Workbook, granularity: string): void {
   for (let i = 0; i < finalOrder.length; i++) {
     const ws = wb.getWorksheet(finalOrder[i]);
     if (ws) {
-      ws.orderNo = i;
+      (ws as any).orderNo = i;
     }
   }
 }

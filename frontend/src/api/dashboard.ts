@@ -1,6 +1,6 @@
 /**
- * Client-side dashboard computation.
- * Replaces the backend API call with local engine computation.
+ * Dashboard data fetcher.
+ * Computes dashboard metrics from the loaded workbook using the local engine.
  */
 import type { DashboardResponse } from "../types/dashboard";
 import { getCurrentWorkbook, getCurrentConfig } from "./client";
@@ -21,6 +21,5 @@ export async function fetchDashboard(
 
   const result = computeDashboard(wb, config, granularity, filters, _topN || 10);
 
-  // Cast to DashboardResponse (the shape matches)
-  return result as unknown as DashboardResponse;
+  return result as DashboardResponse;
 }

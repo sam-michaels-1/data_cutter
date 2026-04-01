@@ -1,10 +1,12 @@
 # Data Cutter
 
-A full-stack web application that converts raw ARR/Revenue Excel data into a professional multi-tab analysis workbook, complete with retention metrics, cohort analysis, and interactive dashboards.
+A client-side web application that converts raw ARR/Revenue Excel data into a professional multi-tab analysis workbook, complete with retention metrics, cohort analysis, and interactive dashboards.
 
 ## Overview
 
 Upload a raw Excel file containing customer-level ARR or revenue data, map your columns through a guided wizard, and Data Cutter will generate a formula-driven Excel workbook with retention waterfall analysis, cohort tracking, and top customer breakdowns — all at your chosen time granularity. A live dashboard lets you explore the data interactively before downloading.
+
+Everything runs in the browser — no backend or server required.
 
 ## Features
 
@@ -16,64 +18,40 @@ Upload a raw Excel file containing customer-level ARR or revenue data, map your 
 - **Cohort analysis** — Logo and NDR cohort heatmaps grouped by acquisition period
 - **Top customers** — Customer ranking, concentration metrics, and status tracking
 - **Live dashboard** — Filter by attribute values and explore metrics before downloading
-- **Session management** — Uploaded files are automatically cleaned up after one hour
 
 ## Project Structure
 
 ```
 Data Cutter/
-├── backend/                  # FastAPI REST API
-│   ├── main.py               # App entry point, CORS, background cleanup
-│   ├── requirements.txt      # Python dependencies
-│   ├── routers/
-│   │   ├── wizard.py         # Upload, detect, generate, download endpoints
-│   │   └── dashboard.py      # Live metrics computation endpoints
-│   ├── schemas.py            # Wizard request/response models
-│   ├── schemas_dashboard.py  # Dashboard response models
-│   ├── services/
-│   │   ├── detect.py         # Column role auto-detection
-│   │   ├── config_builder.py # Translates wizard config → engine config
-│   │   └── compute.py        # Dashboard metric computation (pandas)
-│   └── temp_store.py         # Session and temp file management
-│
-├── frontend/                 # React + TypeScript + Vite
-│   └── src/
-│       ├── App.tsx           # Router (5 pages)
-│       ├── pages/            # ImportPage, DashboardPage, CohortPage, CustomersPage, DownloadPage
-│       └── components/       # Wizard steps, charts, shared UI
-│
-└── data-pack-app/            # Core Excel generation engine
-    └── engine/
-        ├── generator.py      # Main orchestrator — builds the output workbook
-        ├── clean_data.py     # Raw and aggregated data tabs
-        ├── retention.py      # Retention metric tabs
-        ├── cohort.py         # Cohort analysis tabs
-        ├── top_customers.py  # Top customers tab
-        ├── formatting.py     # Cell styling and formatting
-        └── utils.py          # Formula builders and helpers
+└── frontend/                 # React + TypeScript + Vite
+    └── src/
+        ├── App.tsx           # Router (5 pages)
+        ├── api/              # API client and dashboard data fetcher
+        ├── engine/           # Excel generation engine (TypeScript)
+        │   ├── generator.ts  # Main orchestrator — builds the output workbook
+        │   ├── clean_data.ts # Raw and aggregated data tabs
+        │   ├── retention.ts  # Retention metric tabs
+        │   ├── cohort.ts     # Cohort analysis tabs
+        │   ├── top_customers.ts # Top customers tab
+        │   ├── formatting.ts # Cell styling and formatting
+        │   ├── detect.ts     # Column role auto-detection
+        │   ├── config_builder.ts # Wizard config → engine config
+        │   ├── compute.ts    # Dashboard metric computation
+        │   ├── utils.ts      # Formula builders and helpers
+        │   └── types.ts      # Shared type definitions
+        ├── pages/            # ImportPage, DashboardPage, CohortPage, CustomersPage, DownloadPage
+        ├── components/       # Wizard steps, charts, shared UI
+        ├── hooks/            # useWizard, useDashboard
+        ├── types/            # TypeScript type definitions
+        └── utils/            # Formatting utilities
 ```
 
 ## Prerequisites
 
-- Python 3.10+
 - Node.js 18+
 - npm 9+
 
 ## Getting Started
-
-### 1. Backend
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate       # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-The API will be available at `http://127.0.0.1:8000`.
-
-### 2. Frontend
 
 ```bash
 cd frontend
@@ -121,12 +99,9 @@ Tabs are generated for each selected granularity (e.g., separate monthly and qua
 
 | Layer | Technology |
 |-------|------------|
-| Backend framework | FastAPI |
-| Data processing | pandas, numpy |
-| Excel I/O | openpyxl |
-| ASGI server | uvicorn |
-| Frontend framework | React 19 + TypeScript |
+| Framework | React 19 + TypeScript |
 | Build tool | Vite |
+| Excel I/O | ExcelJS |
 | Charts | Recharts |
 | Styling | Tailwind CSS |
-| HTTP client | axios |
+| Routing | React Router |

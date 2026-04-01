@@ -2,13 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "FastAPI Backend",
-      "runtimeExecutable": "/usr/bin/python3",
-      "runtimeArgs": ["/tmp/start_backend.py"],
-      "port": 8000,
-      "cwd": "."
-    },
-    {
       "name": "Vite Frontend",
       "runtimeExecutable": "/Users/sammichaels/.nvm/versions/node/v20.20.2/bin/node",
       "runtimeArgs": ["node_modules/vite/bin/vite.js"],

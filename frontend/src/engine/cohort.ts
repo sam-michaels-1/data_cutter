@@ -90,13 +90,13 @@ export function generateCohortTab(
 }
 
 function writeCohortBlock(
-  ws: Worksheet, startRow: number, block: FilterBlock, config: EngineConfig,
+  ws: Worksheet, startRow: number, block: FilterBlock, _config: EngineConfig,
   cleanSheet: string, cleanLayout: CleanLayout,
   cdrFirst: number, cdrLast: number,
   qCol: number, yCol: number, filterStart: number, _filterEnd: number, cohortLabelCol: number,
   s1Start: number, s1End: number, s2Start: number, s2End: number,
-  s3Label: number, s3StartVal: number, s3DataStart: number, s3DataEnd: number,
-  s4Label: number, s4StartVal: number, s4DataStart: number, s4DataEnd: number,
+  s3Label: number, s3StartVal: number, s3DataStart: number, _s3DataEnd: number,
+  s4Label: number, s4StartVal: number, s4DataStart: number, _s4DataEnd: number,
   numDates: number, numCohorts: number, numAttrs: number, attrNames: string[],
   unitsCell: string, granularity: string, periodPrefix: string, metricLabel: string
 ): void {
@@ -142,7 +142,6 @@ function writeCohortBlock(
 
   const firstCohortRow = rHeaders + 1;
   const srcArrStart = colLetter(cleanLayout.arr_start);
-  const srcArrEnd = colLetter(cleanLayout.arr_end);
 
   // Cohort data rows
   for (let cohortIdx = 0; cohortIdx < numCohorts; cohortIdx++) {

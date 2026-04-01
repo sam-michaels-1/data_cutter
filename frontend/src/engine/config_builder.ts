@@ -1,17 +1,9 @@
 /**
  * Translate wizard selections into the engine's config dictionary.
- * Port of backend/services/config_builder.py for client-side use.
  */
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
-
-function colNumFromLetter(letter: string): number {
-  let result = 0;
-  for (let i = 0; i < letter.length; i++) {
-    result = result * 26 + (letter.toUpperCase().charCodeAt(i) - 64);
-  }
-  return result;
-}
+import { colNum } from './utils';
 
 /**
  * Auto-detect the raw data frequency by examining date intervals.
@@ -20,7 +12,7 @@ function detectRawDataFrequency(wb: Workbook, sheetName: string, dateCol: string
   const ws = wb.getWorksheet(sheetName);
   if (!ws) return 'annual';
 
-  const colIdx = colNumFromLetter(dateCol);
+  const colIdx = colNum(dateCol);
   const dates: Date[] = [];
 
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
@@ -55,7 +47,7 @@ function getUniqueValues(wb: Workbook, sheetName: string, colLetterStr: string, 
   const ws = wb.getWorksheet(sheetName);
   if (!ws) return [];
 
-  const colIdx = colNumFromLetter(colLetterStr);
+  const colIdx = colNum(colLetterStr);
   const values = new Set<string>();
 
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {

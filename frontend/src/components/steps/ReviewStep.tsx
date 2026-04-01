@@ -33,7 +33,7 @@ export default function ReviewStep({ state, dispatch, onViewDashboard }: Props) 
     } catch (err: any) {
       dispatch({
         type: "SET_ERROR",
-        error: err?.message || "Generation failed",
+        error: err instanceof Error ? err.message : "Generation failed",
       });
     }
   }, [state, dispatch]);

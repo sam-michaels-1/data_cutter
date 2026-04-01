@@ -33,8 +33,6 @@ export function generateTopCustomersTab(
   const s2Start = s1End + 2;
   const s2End = s2Start + numDates - 2;
   const s3Start = s2End + 2;
-  const s3End = s3Start + numDates - 1;
-
   const cdrFirst = firstDataRow;
   const cdrLast = lastDataRow;
   const cleanRankCol = colLetter(cleanLayout.rank);
