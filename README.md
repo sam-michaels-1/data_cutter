@@ -10,8 +10,8 @@ Everything runs in the browser — no backend or server required.
 
 ## Features
 
-- **Guided import wizard** — 5-step flow to upload data, map columns, and configure output
-- **Auto-detection** — Automatically infers date columns, customer IDs, ARR values, and scale factors
+- **Guided import wizard** — 7-step flow to upload data, detect format, and configure output
+- **Auto-detection** — Automatically infers date columns, customer IDs, ARR values, scale factors, and data frequency
 - **Multi-granularity output** — Generate monthly, quarterly, and/or annual views from a single upload
 - **Formula-driven workbook** — Output uses Excel formulas, not static values, so the workbook stays live
 - **Retention metrics** — Lost-only, Punitive, and Net Dollar Retention calculated per period
@@ -64,14 +64,20 @@ The app will be available at `http://localhost:5173`.
 ## Usage Workflow
 
 1. **Upload** — Drag and drop your raw Excel file (.xlsx or .xlsm)
-2. **Configure** — Select the sheet, data type (ARR or Revenue), and output granularities
-3. **Map columns** — Assign your date, customer ID, value, and optional attribute columns
-4. **Review dashboard** — Explore retention, cohort, and customer metrics with live filters
-5. **Download** — Export the fully-formatted Excel workbook
+2. **Input format** — Select raw list or cleaned table format; columns are auto-detected
+3. **Frequency** — Confirm or override the detected data frequency (monthly/quarterly)
+4. **Data type** — Choose ARR or Revenue
+5. **Granularity** — Select output granularities (monthly, quarterly, and/or annual)
+6. **Identifiers** — Select and rename customer attributes for filtering
+7. **Review & generate** — Confirm settings and generate the workbook
+8. **Explore dashboard** — Filter by attributes and explore retention, cohort, and customer metrics
+9. **Download** — Export the fully-formatted Excel workbook
 
 ## Input Data Format
 
-Your raw Excel file should contain one row per customer per period with at minimum:
+Data Cutter supports two input formats:
+
+**Raw list** — One row per customer per period:
 
 | Column | Description |
 |--------|-------------|
@@ -80,7 +86,13 @@ Your raw Excel file should contain one row per customer per period with at minim
 | ARR / Revenue | Numeric value (raw, in thousands, or in millions) |
 | Attributes (optional) | Categorical fields for filtering (e.g., Region, Segment, Product) |
 
-Data Cutter auto-detects the scale factor (1, 1,000, or 1,000,000) but this can be adjusted in the wizard.
+**Cleaned table** — Customers as rows, date periods as columns:
+
+| Customer ID | Attributes... | Q1 2023 | Q2 2023 | Q3 2023 | ... |
+|-------------|---------------|---------|---------|---------|-----|
+| Acme Corp   | Enterprise    | 120,000 | 125,000 | 130,000 | ... |
+
+Data Cutter auto-detects the format, column roles, scale factor (1, 1K, or 1M), and data frequency — all of which can be adjusted in the wizard.
 
 ## Output Workbook Tabs
 
