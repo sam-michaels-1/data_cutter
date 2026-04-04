@@ -24,7 +24,7 @@ function SinglePie({ slices, title, formatValue }: {
   return (
     <div>
       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 text-center">{title}</p>
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={180}>
         <PieChart>
           <Pie
             data={slices}
@@ -32,8 +32,8 @@ function SinglePie({ slices, title, formatValue }: {
             nameKey="label"
             cx="50%"
             cy="50%"
-            outerRadius={80}
-            innerRadius={30}
+            outerRadius={65}
+            innerRadius={22}
             paddingAngle={1}
           >
             {slices.map((_, idx) => (
@@ -71,10 +71,10 @@ export default function IdentifierPieCharts({ data, scaleFactor, metricLabel }: 
   if (data.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {data.map(({ identifierName, arrSlices, countSlices }) => (
-        <div key={identifierName} className="bg-white border border-gray-200 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+        <div key={identifierName} className="bg-white border border-gray-200 rounded-xl p-3">
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
             {identifierName} Breakdown
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

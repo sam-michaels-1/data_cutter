@@ -69,7 +69,7 @@ export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, late
           return (
             <div
               key={key}
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3"
+              className="bg-white border border-gray-200 rounded-xl px-3 py-2"
             >
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                 {label}

@@ -69,7 +69,7 @@ export default function DashboardPage() {
   const metricLabel = data_type === "revenue" ? "Revenue" : "ARR";
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px]">
+    <div className="p-4 space-y-3 max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>

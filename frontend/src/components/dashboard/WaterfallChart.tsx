@@ -88,14 +88,14 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+    <div className="bg-white border border-gray-200 rounded-xl p-3">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
         Latest Period Waterfall
         <span className="ml-2 text-xs font-normal text-gray-500">
           ({waterfall.period_label})
         </span>
       </h3>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 20, right: 20, bottom: 5, left: 10 }}>
           <XAxis
             dataKey="name"

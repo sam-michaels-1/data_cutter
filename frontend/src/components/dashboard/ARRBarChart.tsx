@@ -72,11 +72,11 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
   }));
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+    <div className="bg-white border border-gray-200 rounded-xl p-3">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
         {metricLabel} Over Time
       </h3>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 5, right: 20, bottom: 30, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.8} vertical={false} />
           <XAxis

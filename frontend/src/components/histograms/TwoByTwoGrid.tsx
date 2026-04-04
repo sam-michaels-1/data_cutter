@@ -11,15 +11,15 @@ interface Props {
 export default function TwoByTwoGrid({ data, title, subtitle, formatMetric, colorScale }: Props) {
   if (data.xLabels.length === 0 || data.yLabels.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{title}</h3>
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">{title}</h3>
         <p className="text-sm text-gray-400 py-8 text-center">Not enough data</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
+    <div className="bg-white border border-gray-200 rounded-xl p-3">
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
         {subtitle && <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>}

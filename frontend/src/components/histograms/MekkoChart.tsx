@@ -77,16 +77,16 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
 
   if (data.columns.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{title}</h3>
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">{title}</h3>
         <p className="text-sm text-gray-400 py-8 text-center">No data available</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{title}</h3>
+    <div className="bg-white border border-gray-200 rounded-xl p-3">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">{title}</h3>
 
       {/* Legend */}
       {data.yLabels.length > 1 && (
@@ -103,7 +103,7 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
       {/* Chart body + tooltip wrapper */}
       <div className="relative">
         <div className="relative">
-          <div className="flex h-[300px] border border-gray-200 rounded-md overflow-hidden">
+          <div className="flex h-[220px] border border-gray-200 rounded-md overflow-hidden">
             {data.columns.map((col, ci) => {
               const widthPct = Math.max(col.xPct * 100, 2);
               return (

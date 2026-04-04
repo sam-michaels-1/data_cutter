@@ -82,7 +82,7 @@ export default function CustomersPage() {
   const { granularity, available_granularities, attribute_options } = data;
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px]">
+    <div className="p-4 space-y-3 max-w-[1600px]">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold">Customer Ranking</h1>
@@ -139,7 +139,7 @@ export default function CustomersPage() {
         />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

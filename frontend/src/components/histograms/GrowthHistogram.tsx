@@ -17,8 +17,8 @@ interface Props {
 export default function GrowthHistogram({ data }: Props) {
   if (data.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
           LTM Growth Rate Distribution
         </h3>
         <p className="text-sm text-gray-400 py-8 text-center">
@@ -29,11 +29,11 @@ export default function GrowthHistogram({ data }: Props) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+    <div className="bg-white border border-gray-200 rounded-xl p-3">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
         LTM Growth Rate Distribution
       </h3>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
           <XAxis

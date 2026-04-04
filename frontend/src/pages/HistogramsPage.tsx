@@ -126,7 +126,7 @@ export default function HistogramsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px]">
+    <div className="p-4 space-y-3 max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -159,7 +159,7 @@ export default function HistogramsPage() {
       <ARRHistogram data={data.arrHistogram} metricLabel={metricLabel} />
 
       {/* B & C) Mekko Charts */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Mekko Axes</span>
           <AxisSelector label="X-Axis" value={effectiveMekkoX} options={identifiers} onChange={handleMekkoXChange} />
@@ -190,7 +190,7 @@ export default function HistogramsPage() {
       <GrowthHistogram data={data.growthHistogram} />
 
       {/* F & G) Grids */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Grid Axes</span>
           <AxisSelector label="X-Axis" value={effectiveGridX} options={identifiers} onChange={handleGridXChange} />

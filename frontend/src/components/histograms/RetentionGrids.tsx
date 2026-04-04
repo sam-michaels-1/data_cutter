@@ -24,7 +24,7 @@ function retentionColor(v: number): { bg: string; text: string } {
 
 export default function RetentionGrids({ netRetention, lossRetention, subtitle }: Props) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <TwoByTwoGrid
         data={netRetention}
         title="Net Retention by Segment"

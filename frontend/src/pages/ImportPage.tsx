@@ -79,8 +79,19 @@ export default function ImportPage() {
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold">Import Data</h1>
         <p className="text-gray-500 text-sm">
-          Upload raw customer data and configure your analysis
+          Upload your customer cube data and configure your desired analysis
         </p>
+        <div className="flex justify-center gap-2 mt-3">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
+            ✓ No signup
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
+            ✓ Excel export
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
+            ✓ Private by design
+          </span>
+        </div>
       </div>
 
       <StepIndicator currentStep={state.currentStep} onStepClick={goToStep} />

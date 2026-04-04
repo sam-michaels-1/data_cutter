@@ -80,7 +80,7 @@ export default function CohortPage() {
       : "Customer Count by Cohort";
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px]">
+    <div className="p-4 space-y-3 max-w-[1600px]">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Cohort Analysis</h1>
         <p className="text-sm text-gray-500">
@@ -137,8 +137,8 @@ export default function CohortPage() {
         />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
           {title}
         </h3>
         <CohortHeatmap cohort={cohort} metric={metric} scaleFactor={scale_factor} granularity={granularity} metricLabel={metricLabel} />
