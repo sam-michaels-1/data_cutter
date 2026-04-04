@@ -26,7 +26,14 @@ export default function TwoByTwoGrid({ data, title, subtitle, formatMetric, colo
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full table-fixed text-xs">
+          <colgroup>
+            <col style={{ width: '28%' }} />
+            {data.xLabels.map((_, i) => (
+              <col key={i} style={{ width: `${54 / data.xLabels.length}%` }} />
+            ))}
+            <col style={{ width: '18%' }} />
+          </colgroup>
           <thead>
             <tr>
               <th className="text-left py-2 pr-3 text-gray-500 font-medium" />

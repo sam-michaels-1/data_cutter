@@ -108,8 +108,9 @@ function roundBucket(val: number, direction: 'floor' | 'ceil'): number {
   else if (abs >= 1_000_000) step = 500_000;
   else if (abs >= 100_000) step = 100_000;
   else if (abs >= 10_000) step = 10_000;
-  else if (abs >= 1_000) step = 1_000;
-  else step = 100;
+  else if (abs >= 1_000) step = 500;
+  else if (abs >= 100) step = 50;
+  else step = 10;
 
   return direction === 'floor'
     ? Math.floor(val / step) * step
@@ -182,7 +183,8 @@ function formatDollar(v: number): string {
 }
 
 function formatPctLabel(v: number): string {
-  return `${(v * 100).toFixed(0)}%`;
+  const pct = Math.abs(v * 100).toFixed(0);
+  return v < 0 ? `(${pct}%)` : `${pct}%`;
 }
 
 function formatBucketLabel(min: number, max: number, isFloor: boolean, isCeiling: boolean, isPct = false): string {

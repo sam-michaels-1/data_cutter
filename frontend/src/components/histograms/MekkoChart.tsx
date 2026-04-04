@@ -72,7 +72,12 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
     }
     bottomPct += stack.pct * 100; // top edge of this segment
 
-    return { col, stack, leftPct, bottomPct };
+    // Determine tooltip alignment to prevent clipping at edges
+    let translateX = '-50%'; // default: centered
+    if (leftPct < 15) translateX = '0%';        // near left edge: align left
+    else if (leftPct > 85) translateX = '-100%'; // near right edge: align right
+
+    return { col, stack, leftPct, bottomPct, translateX };
   }, [hovered, data]);
 
   if (data.columns.length === 0) {
@@ -149,7 +154,7 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
               style={{
                 left: `${tooltipInfo.leftPct}%`,
                 bottom: `${tooltipInfo.bottomPct}%`,
-                transform: 'translateX(-50%) translateY(-4px)',
+                transform: `translateX(${tooltipInfo.translateX}) translateY(-4px)`,
               }}
             >
               <div className="font-medium text-gray-800">{tooltipInfo.stack.yLabel}</div>
@@ -164,13 +169,13 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
         </div>
 
         {/* X-axis labels */}
-        <div className="flex mt-1">
+        <div className="flex mt-1 overflow-x-clip">
           {data.columns.map((col, ci) => {
             const widthPct = Math.max(col.xPct * 100, 2);
             return (
-              <div key={ci} className="text-center overflow-hidden" style={{ width: `${widthPct}%` }}>
-                <div className="text-[10px] text-gray-600 font-medium truncate px-0.5">{col.xLabel}</div>
-                <div className="text-[9px] text-gray-400 truncate px-0.5">
+              <div key={ci} className="text-center" style={{ width: `${widthPct}%` }}>
+                <div className="text-[10px] text-gray-600 font-medium whitespace-nowrap px-0.5">{col.xLabel}</div>
+                <div className="text-[9px] text-gray-400 whitespace-nowrap px-0.5">
                   {formatValue(col.xTotal)} / {(col.xPct * 100).toFixed(1)}%
                 </div>
               </div>
