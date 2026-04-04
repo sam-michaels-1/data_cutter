@@ -47,7 +47,9 @@ function getCellColor(value: number | null, metric: CohortMetric): string {
 function formatValue(value: number | null, metric: CohortMetric, scaleFactor: number): string {
   if (value == null) return "";
   if (metric === "ndr" || metric === "logo_retention") {
-    return `${(value * 100).toFixed(0)}%`;
+    const isNeg = value < 0;
+    const formatted = `${(Math.abs(value) * 100).toFixed(0)}%`;
+    return isNeg ? `(${formatted})` : formatted;
   }
   if (metric === "arr") {
     return value === 0 ? "$0" : formatCurrency(value, scaleFactor);

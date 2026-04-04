@@ -58,7 +58,11 @@ export interface CohortData {
 export interface AttributeOption {
   name: string;
   values: string[];
+  multiSelect?: boolean;
 }
+
+export type FilterValue = string | string[];
+export type Filters = Record<string, FilterValue>;
 
 export interface DashboardResponse {
   overview: OverviewData;

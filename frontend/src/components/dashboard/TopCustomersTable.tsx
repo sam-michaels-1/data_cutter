@@ -76,7 +76,9 @@ export default function TopCustomersTable({ customers, scaleFactor, metricLabel 
                   >
                     {changePct == null
                       ? "N/A"
-                      : `${changePct > 0 ? "+" : ""}${(changePct * 100).toFixed(1)}%`}
+                      : changePct < 0
+                      ? `(${(Math.abs(changePct) * 100).toFixed(1)}%)`
+                      : `+${(changePct * 100).toFixed(1)}%`}
                   </td>
                   <td className="py-2 pr-4 text-right font-mono text-gray-600">
                     {(c.pct_of_total * 100).toFixed(1)}%

@@ -3,7 +3,7 @@ import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
 import CohortHeatmap from "../components/dashboard/CohortHeatmap";
 import AttributeFilterBar from "../components/AttributeFilterBar";
-import type { CohortMetric } from "../types/dashboard";
+import type { CohortMetric, Filters } from "../types/dashboard";
 
 const BASE_METRICS: { key: CohortMetric; label: string }[] = [
   { key: "arr", label: "{metric}" },
@@ -16,13 +16,13 @@ export default function CohortPage() {
   const { sessionId } = useSession();
   const { data, loading, error, refetch } = useDashboard(sessionId);
   const [metric, setMetric] = useState<CohortMetric>("arr");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Filters>({});
 
   const handleGranularityChange = (g: string) => {
     refetch(g, { filters });
   };
 
-  const handleFilterChange = (newFilters: Record<string, string>) => {
+  const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
     refetch(data?.granularity, { filters: newFilters });
   };

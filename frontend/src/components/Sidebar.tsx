@@ -12,6 +12,7 @@ const NAV_SECTIONS = [
     label: "ANALYSIS",
     items: [
       { to: "/dashboard", label: "Dashboard", icon: ChartIcon },
+      { to: "/histograms", label: "Histograms", icon: HistogramIcon },
       { to: "/cohort", label: "Cohort Analysis", icon: GridIcon },
       { to: "/customers", label: "Top Customers", icon: UsersIcon },
     ],
@@ -30,9 +31,10 @@ export default function Sidebar() {
   return (
     <aside className="w-56 shrink-0 h-screen sticky top-0 flex flex-col bg-gray-900 text-gray-300 border-r border-gray-800">
       {/* Logo */}
-      <div className="px-5 py-5">
+      <div className="px-5 py-5 flex items-center gap-2.5">
+        <img src="/cube-cutter-logo.png" alt="Cube Cutter" className="w-7 h-7 rounded" />
         <span className="text-lg font-bold text-teal-400 tracking-tight">
-          Data Cube Cutter
+          Cube Cutter
         </span>
       </div>
 
@@ -83,6 +85,14 @@ function UploadIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+    </svg>
+  );
+}
+
+function HistogramIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 16v-3m4 3v-7m4 7V9m4 7V5" />
     </svg>
   );
 }

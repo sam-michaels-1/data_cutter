@@ -4,7 +4,7 @@ import { fetchDashboard } from "../api/dashboard";
 
 export interface RefetchOptions {
   granularity?: string;
-  filters?: Record<string, string>;
+  filters?: Record<string, string | string[]>;
   topN?: number;
 }
 

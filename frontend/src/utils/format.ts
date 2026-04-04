@@ -7,10 +7,14 @@
  */
 export function formatCurrency(value: number, scaleFactor: number): string {
   const actual = value * scaleFactor;
-  if (actual >= 1_000_000_000) return `$${(actual / 1_000_000_000).toFixed(1)}B`;
-  if (actual >= 1_000_000) return `$${(actual / 1_000_000).toFixed(1)}M`;
-  if (actual >= 1_000) return `$${(actual / 1_000).toFixed(1)}K`;
-  return `$${actual.toFixed(0)}`;
+  const isNegative = actual < 0;
+  const abs = Math.abs(actual);
+  let formatted: string;
+  if (abs >= 1_000_000_000) formatted = `$${(abs / 1_000_000_000).toFixed(1)}B`;
+  else if (abs >= 1_000_000) formatted = `$${(abs / 1_000_000).toFixed(1)}M`;
+  else if (abs >= 1_000) formatted = `$${(abs / 1_000).toFixed(1)}K`;
+  else formatted = `$${abs.toFixed(0)}`;
+  return isNegative ? `(${formatted})` : formatted;
 }
 
 /**
@@ -25,5 +29,7 @@ export function formatYAxis(value: number, scaleFactor: number): string {
  */
 export function formatPct(value: number | null): string {
   if (value == null) return "N/A";
-  return `${(value * 100).toFixed(1)}%`;
+  const isNegative = value < 0;
+  const formatted = `${(Math.abs(value) * 100).toFixed(1)}%`;
+  return isNegative ? `(${formatted})` : formatted;
 }

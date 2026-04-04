@@ -4,6 +4,7 @@ import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
 import AttributeFilterBar from "../components/AttributeFilterBar";
 import { formatCurrency } from "../utils/format";
+import type { Filters } from "../types/dashboard";
 
 const STATUS_STYLES: Record<string, string> = {
   Growth: "text-emerald-700 bg-emerald-100",
@@ -17,14 +18,14 @@ const TOP_N_OPTIONS = [10, 15, 25, 50];
 export default function CustomersPage() {
   const { sessionId } = useSession();
   const { data, loading, error, refetch } = useDashboard(sessionId);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Filters>({});
   const [topN, setTopN] = useState(10);
 
   const handleGranularityChange = (g: string) => {
     refetch(g, { filters, topN });
   };
 
-  const handleFilterChange = (newFilters: Record<string, string>) => {
+  const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
     refetch(data?.granularity, { filters: newFilters, topN });
   };
@@ -192,7 +193,9 @@ export default function CustomersPage() {
                     >
                       {c.change_pct == null
                         ? "N/A"
-                        : `${c.change_pct > 0 ? "+" : ""}${(c.change_pct * 100).toFixed(1)}%`}
+                        : c.change_pct < 0
+                        ? `(${(Math.abs(c.change_pct) * 100).toFixed(1)}%)`
+                        : `+${(c.change_pct * 100).toFixed(1)}%`}
                     </td>
                     <td className="py-2.5 pr-4 text-right font-mono text-gray-600">
                       {(c.pct_of_total * 100).toFixed(1)}%

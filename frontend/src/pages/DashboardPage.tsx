@@ -6,17 +6,18 @@ import ARRBarChart from "../components/dashboard/ARRBarChart";
 import WaterfallChart from "../components/dashboard/WaterfallChart";
 import TopCustomersTable from "../components/dashboard/TopCustomersTable";
 import AttributeFilterBar from "../components/AttributeFilterBar";
+import type { Filters } from "../types/dashboard";
 
 export default function DashboardPage() {
   const { sessionId } = useSession();
   const { data, loading, error, refetch } = useDashboard(sessionId);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Filters>({});
 
   const handleGranularityChange = (g: string) => {
     refetch(g, { filters });
   };
 
-  const handleFilterChange = (newFilters: Record<string, string>) => {
+  const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
     refetch(data?.granularity, { filters: newFilters });
   };

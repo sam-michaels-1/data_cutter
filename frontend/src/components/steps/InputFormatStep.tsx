@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { WizardState, InputFormat } from "../../types/wizard";
 import { detectColumns, detectTableCols } from "../../api/client";
 import ColumnMapper from "../ui/ColumnMapper";
@@ -64,6 +64,18 @@ export default function InputFormatStep({ state, dispatch }: Props) {
     },
     [state.sessionId, state.selectedSheet, dispatch]
   );
+
+  // Auto-detect columns when entering step 2 with a valid session but no detection data
+  useEffect(() => {
+    if (
+      state.sessionId &&
+      state.selectedSheet &&
+      state.columns.length === 0 &&
+      !state.isLoading
+    ) {
+      handleFormatSelect(state.inputFormat);
+    }
+  }, [state.sessionId, state.selectedSheet]);
 
   // Show all columns in the dropdown so the user can always override detection
   const nonDateColumns = state.columns;

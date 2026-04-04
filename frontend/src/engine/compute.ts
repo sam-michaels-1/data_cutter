@@ -14,21 +14,21 @@ function colNumFromLetter(letter: string): number {
   return result;
 }
 
-interface RawRecord {
+export interface RawRecord {
   date: Date;
   customer_id: string;
   arr: number;
   [key: string]: unknown;
 }
 
-interface AggRecord {
+export interface AggRecord {
   customer_id: string;
   period_label: string;
   period_sort: number;
   arr: number;
 }
 
-function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
+export function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
   const ws = wb.getWorksheet(config.raw_data_sheet);
   if (!ws) return [];
 
@@ -68,7 +68,7 @@ function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
  * Read data from a cleaned/wide table (customers as rows, dates as columns).
  * Converts to the same RawRecord[] format as readRawData.
  */
-function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[] {
+export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[] {
   const ws = wb.getWorksheet(config.raw_data_sheet);
   if (!ws) return [];
 
@@ -124,14 +124,14 @@ function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[] {
   return rows;
 }
 
-function assignFiscalPeriod(date: Date, fyMonth: number): { year: number; quarter: number } {
+export function assignFiscalPeriod(date: Date, fyMonth: number): { year: number; quarter: number } {
   const month = date.getMonth() + 1;
   const fiscalYear = month > fyMonth ? date.getFullYear() + 1 : date.getFullYear();
   const fiscalQuarter = Math.floor(((month - (fyMonth + 1) + 12) % 12) / 3) + 1;
   return { year: fiscalYear, quarter: fiscalQuarter };
 }
 
-function aggregateToGranularity(
+export function aggregateToGranularity(
   rawRows: RawRecord[], granularity: string, fyMonth: number, dataType: string
 ): { records: AggRecord[]; periodDateMap: Record<string, string> } {
   const records: AggRecord[] = [];
@@ -239,7 +239,7 @@ function aggregateToGranularity(
   return { records, periodDateMap };
 }
 
-function buildArrMatrix(records: AggRecord[]): { pivot: Map<string, Map<string, number>>; periods: string[] } {
+export function buildArrMatrix(records: AggRecord[]): { pivot: Map<string, Map<string, number>>; periods: string[] } {
   // Get sorted periods
   const periodSet = new Map<string, number>();
   for (const r of records) {
@@ -264,22 +264,22 @@ function buildArrMatrix(records: AggRecord[]): { pivot: Map<string, Map<string, 
   return { pivot, periods };
 }
 
-function getYoyOffset(granularity: string): number {
+export function getYoyOffset(granularity: string): number {
   return { monthly: 12, quarterly: 4, annual: 1 }[granularity] || 1;
 }
 
-function getPivotValue(pivot: Map<string, Map<string, number>>, cust: string, period: string): number {
+export function getPivotValue(pivot: Map<string, Map<string, number>>, cust: string, period: string): number {
   return pivot.get(cust)?.get(period) || 0;
 }
 
-interface DerivedData {
+export interface DerivedData {
   churn: Map<string, Map<string, number>>;
   downsell: Map<string, Map<string, number>>;
   upsell: Map<string, Map<string, number>>;
   new_biz: Map<string, Map<string, number>>;
 }
 
-function computeDerived(pivot: Map<string, Map<string, number>>, periods: string[], yoyOffset: number): DerivedData {
+export function computeDerived(pivot: Map<string, Map<string, number>>, periods: string[], yoyOffset: number): DerivedData {
   const result: DerivedData = { churn: new Map(), downsell: new Map(), upsell: new Map(), new_biz: new Map() };
   const numDerived = periods.length - yoyOffset;
   if (numDerived <= 0) return result;
@@ -311,7 +311,7 @@ function computeDerived(pivot: Map<string, Map<string, number>>, periods: string
   return result;
 }
 
-function buildCohortMap(pivot: Map<string, Map<string, number>>, periods: string[]): Map<string, string> {
+export function buildCohortMap(pivot: Map<string, Map<string, number>>, periods: string[]): Map<string, string> {
   const cohortMap = new Map<string, string>();
   for (const [cust] of pivot) {
     for (const p of periods) {
@@ -324,7 +324,7 @@ function buildCohortMap(pivot: Map<string, Map<string, number>>, periods: string
   return cohortMap;
 }
 
-function sumDerivedPeriod(derived: Map<string, Map<string, number>>, period: string): number {
+export function sumDerivedPeriod(derived: Map<string, Map<string, number>>, period: string): number {
   let total = 0;
   for (const [, m] of derived) {
     total += m.get(period) || 0;
@@ -332,20 +332,20 @@ function sumDerivedPeriod(derived: Map<string, Map<string, number>>, period: str
   return total;
 }
 
-function computeAttributeOptions(rawRows: RawRecord[], attrNames: string[]): { name: string; values: string[] }[] {
-  const options: { name: string; values: string[] }[] = [];
+export function computeAttributeOptions(rawRows: RawRecord[], attrNames: string[]): { name: string; values: string[]; multiSelect?: boolean }[] {
+  const options: { name: string; values: string[]; multiSelect?: boolean }[] = [];
   for (const name of attrNames) {
     const vals = new Set<string>();
     for (const row of rawRows) {
       const v = row[name];
       if (v && typeof v === 'string' && v !== '') vals.add(v);
     }
-    options.push({ name, values: [...vals].sort() });
+    options.push({ name, values: [...vals].sort(), multiSelect: true });
   }
   return options;
 }
 
-function buildAttrLookup(rawRows: RawRecord[], attrNames: string[]): Record<string, Record<string, string>> {
+export function buildAttrLookup(rawRows: RawRecord[], attrNames: string[]): Record<string, Record<string, string>> {
   if (attrNames.length === 0) return {};
   const lookup: Record<string, Record<string, string>> = {};
   for (const row of rawRows) {
@@ -410,14 +410,14 @@ export interface DashboardResult {
   granularity: string;
   available_granularities: string[];
   scale_factor: number;
-  attribute_options: { name: string; values: string[] }[];
+  attribute_options: { name: string; values: string[]; multiSelect?: boolean }[];
   data_type: string;
 }
 
 export function computeDashboard(
   wb: Workbook, config: EngineConfig,
   granularity?: string,
-  filters?: Record<string, string>,
+  filters?: Record<string, string | string[]>,
   topN = 10
 ): DashboardResult {
   let rawRows = config.input_format === 'cleaned'
@@ -431,10 +431,15 @@ export function computeDashboard(
 
   const attributeOptions = computeAttributeOptions(rawRows, attrNames);
 
-  // Apply filters
+  // Apply regular attribute filters (not Cohort — that's applied post-aggregation)
   if (filters) {
     for (const [attrName, attrValue] of Object.entries(filters)) {
-      if (attrValue) {
+      if (attrName === 'Cohort') continue;
+      if (Array.isArray(attrValue)) {
+        if (attrValue.length > 0) {
+          rawRows = rawRows.filter(r => attrValue.includes(String(r[attrName])));
+        }
+      } else if (attrValue) {
         rawRows = rawRows.filter(r => r[attrName] === attrValue);
       }
     }
@@ -452,9 +457,30 @@ export function computeDashboard(
   const { records, periodDateMap } = aggregateToGranularity(rawRows, targetGran, fyMonth, dataType);
   const { pivot, periods } = buildArrMatrix(records);
   const yoyOffset = getYoyOffset(targetGran);
-  const derived = computeDerived(pivot, periods, yoyOffset);
   const cohortMap = buildCohortMap(pivot, periods);
   const attrLookup = buildAttrLookup(rawRows, attrNames);
+
+  // Build cohort attribute option (always available)
+  const cohortValuesSet = new Set(cohortMap.values());
+  const cohortValues = periods.filter(p => cohortValuesSet.has(p));
+  const allAttributeOptions = [
+    { name: 'Cohort', values: cohortValues, multiSelect: true },
+    ...attributeOptions,
+  ];
+
+  // Apply cohort filter (post-aggregation, on the pivot)
+  const cohortFilter = filters?.['Cohort'];
+  if (cohortFilter && Array.isArray(cohortFilter) && cohortFilter.length > 0 && cohortFilter.length < cohortValues.length) {
+    const selectedSet = new Set(cohortFilter);
+    for (const [cust] of [...pivot]) {
+      const custCohort = cohortMap.get(cust);
+      if (!custCohort || !selectedSet.has(custCohort)) {
+        pivot.delete(cust);
+      }
+    }
+  }
+
+  const derived = computeDerived(pivot, periods, yoyOffset);
 
   const sf = scaleFactor;
 
@@ -578,37 +604,40 @@ export function computeDashboard(
       if (label === cohortLabel) custsInCohort.push(cust);
     }
 
+    // Only include customers still in the pivot (respects cohort filter)
+    const activeCusts = custsInCohort.filter(c => pivot.has(c));
+
     const cohortIdx = periods.indexOf(cohortLabel);
     const arrValues = periods.map((p, i) => {
       if (i < cohortIdx) return null;
       let total = 0;
-      for (const c of custsInCohort) total += getPivotValue(pivot, c, p);
+      for (const c of activeCusts) total += getPivotValue(pivot, c, p);
       return Math.round((total / sf) * 100) / 100;
     });
 
     const custCounts = periods.map((p, i) => {
       if (i < cohortIdx) return null;
       let count = 0;
-      for (const c of custsInCohort) if (getPivotValue(pivot, c, p) > 0) count++;
+      for (const c of activeCusts) if (getPivotValue(pivot, c, p) > 0) count++;
       return count;
     });
 
     let startingArr = 0;
-    for (const c of custsInCohort) startingArr += getPivotValue(pivot, c, cohortLabel);
+    for (const c of activeCusts) startingArr += getPivotValue(pivot, c, cohortLabel);
     let startingCount = 0;
-    for (const c of custsInCohort) if (getPivotValue(pivot, c, cohortLabel) > 0) startingCount++;
+    for (const c of activeCusts) if (getPivotValue(pivot, c, cohortLabel) > 0) startingCount++;
 
     const ndr = periods.map((p, i) => {
       if (i < cohortIdx || startingArr === 0) return null;
       let total = 0;
-      for (const c of custsInCohort) total += getPivotValue(pivot, c, p);
+      for (const c of activeCusts) total += getPivotValue(pivot, c, p);
       return Math.round((total / startingArr) * 10000) / 10000;
     });
 
     const logoRet = periods.map((p, i) => {
       if (i < cohortIdx || startingCount === 0) return null;
       let count = 0;
-      for (const c of custsInCohort) if (getPivotValue(pivot, c, p) > 0) count++;
+      for (const c of activeCusts) if (getPivotValue(pivot, c, p) > 0) count++;
       return Math.round((count / startingCount) * 10000) / 10000;
     });
 
@@ -638,7 +667,7 @@ export function computeDashboard(
     granularity: targetGran,
     available_granularities: available,
     scale_factor: scaleFactor,
-    attribute_options: attributeOptions,
+    attribute_options: allAttributeOptions,
     data_type: dataType,
   };
 }

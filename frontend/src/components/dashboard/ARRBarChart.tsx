@@ -58,7 +58,7 @@ function CustomTick({ x, y, payload, growthPcts, periods }: {
           fontSize={9}
           fontWeight={500}
         >
-          {growth >= 0 ? "+" : ""}{(growth * 100).toFixed(0)}%
+          {growth >= 0 ? `+${(growth * 100).toFixed(0)}%` : `(${(Math.abs(growth) * 100).toFixed(0)}%)`}
         </text>
       )}
     </g>

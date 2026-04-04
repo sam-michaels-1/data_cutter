@@ -16,10 +16,10 @@ const CARDS: {
 }[] = [
   { key: "total_arr", label: "Total {metric}", format: "currency" },
   { key: "customer_count", label: "Customers", format: "count" },
-  { key: "net_retention_pct", label: "Net Retention", format: "pct" },
   { key: "yoy_growth_pct", label: "YoY Growth", format: "pct" },
-  { key: "lost_only_retention_pct", label: "Lost-Only Retention", format: "pct" },
   { key: "punitive_retention_pct", label: "Punitive Retention", format: "pct" },
+  { key: "lost_only_retention_pct", label: "Lost-Only Retention", format: "pct" },
+  { key: "net_retention_pct", label: "Net Retention", format: "pct" },
 ];
 
 function formatAsOfDate(isoDate: string): string {

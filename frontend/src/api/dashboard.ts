@@ -9,7 +9,7 @@ import { computeDashboard } from "../engine/compute";
 export async function fetchDashboard(
   _sessionId: string,
   granularity?: string,
-  filters?: Record<string, string>,
+  filters?: Record<string, string | string[]>,
   _topN?: number
 ): Promise<DashboardResponse> {
   const wb = getCurrentWorkbook();
