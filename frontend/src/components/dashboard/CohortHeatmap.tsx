@@ -119,8 +119,7 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
   }
 
   // "#" column header and value depend on metric
-  const isPctMetric = metric === "ndr" || metric === "logo_retention";
-  const sizeHeader = isPctMetric || metric === "arr" ? `Starting $${metricLabel}` : "# Customers";
+  const sizeHeader = metric === "ndr" || metric === "arr" ? `Starting $${metricLabel}` : "# Customers";
 
   return (
     <div className="overflow-x-auto">
@@ -150,7 +149,7 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
                 {c.label}
               </td>
               <td className="px-2 py-1.5 text-right text-gray-500 font-mono whitespace-nowrap">
-                {isPctMetric || metric === "arr"
+                {metric === "ndr" || metric === "arr"
                   ? formatCurrency(c.starting_arr, scaleFactor)
                   : c.count.toLocaleString()}
               </td>

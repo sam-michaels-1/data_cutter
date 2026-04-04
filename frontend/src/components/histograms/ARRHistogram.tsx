@@ -18,8 +18,8 @@ interface Props {
 export default function ARRHistogram({ data, metricLabel }: Props) {
   if (data.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
           {metricLabel} Distribution by Customer
         </h3>
         <p className="text-sm text-gray-400 py-8 text-center">No data available</p>
@@ -30,11 +30,11 @@ export default function ARRHistogram({ data, metricLabel }: Props) {
   const total = data.reduce((s, d) => s + d.count, 0);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+    <div className="bg-white border border-gray-200 rounded-xl p-3">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
         {metricLabel} Distribution by Customer
       </h3>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 20, right: 20, bottom: 5, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
           <XAxis
@@ -67,8 +67,8 @@ export default function ARRHistogram({ data, metricLabel }: Props) {
             <LabelList
               dataKey="count"
               position="top"
-              formatter={(value: number) =>
-                total > 0 ? `${((value / total) * 100).toFixed(1)}%` : ''
+              formatter={(value) =>
+                total > 0 ? `${((Number(value) / total) * 100).toFixed(1)}%` : ''
               }
               style={{ fontSize: 10, fill: '#6B7280' }}
             />
