@@ -45,7 +45,7 @@ export default function FileUpload({ onFileSelect, isLoading, filename }: Props)
       }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
-      className={`border-2 border-dashed rounded-xl p-12 text-center transition cursor-pointer
+      className={`border-2 border-dashed rounded-xl p-6 sm:p-12 text-center transition cursor-pointer
         ${dragOver ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"}
         ${isLoading ? "opacity-50 pointer-events-none" : ""}
       `}

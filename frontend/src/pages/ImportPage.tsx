@@ -75,22 +75,21 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-4 sm:py-8">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold">Import Data</h1>
         <p className="text-gray-500 text-sm">
           Upload your customer cube data and configure your desired analysis
         </p>
-        <div className="flex justify-center gap-2 mt-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
-            ✓ No signup
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
-            ✓ Excel export
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
-            ✓ Private by design
-          </span>
+        <div className="flex justify-center flex-wrap gap-2 mt-3">
+          {["No signup", "Excel export", "Private by design"].map((label) => (
+            <span
+              key={label}
+              className="inline-flex items-center justify-center gap-1.5 min-w-[8.5rem] px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
+            >
+              &#10003; {label}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -102,7 +101,7 @@ export default function ImportPage() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
         {renderStep()}
       </div>
 

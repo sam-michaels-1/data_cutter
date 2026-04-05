@@ -25,17 +25,28 @@ const NAV_SECTIONS = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export default function Sidebar({ onClose }: SidebarProps) {
   const { sessionId } = useSession();
 
   return (
-    <aside className="w-56 shrink-0 h-screen sticky top-0 flex flex-col bg-gray-900 text-gray-300 border-r border-gray-800">
+    <aside className="w-64 md:w-56 shrink-0 h-screen sticky top-0 flex flex-col bg-gray-900 text-gray-300 border-r border-gray-800">
       {/* Logo */}
-      <div className="px-5 py-5 flex items-center gap-2.5">
-        <img src="/cube-cutter-logo.png" alt="Cube Cutter" className="w-7 h-7 rounded" />
-        <span className="text-lg font-bold text-teal-400 tracking-tight">
+      <div className="px-5 py-5 flex items-center gap-1.5">
+        <img src="/cube-cutter-logo.png" alt="Cube Cutter" className="w-9 h-9 rounded" />
+        <span className="text-xl font-bold text-teal-400 tracking-tight flex-1">
           Cube Cutter
         </span>
+        {onClose && (
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-200 md:hidden" aria-label="Close menu">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -53,7 +64,13 @@ export default function Sidebar() {
                   <li key={item.to}>
                     <NavLink
                       to={disabled ? "#" : item.to}
-                      onClick={(e) => disabled && e.preventDefault()}
+                      onClick={(e) => {
+                        if (disabled) {
+                          e.preventDefault();
+                        } else {
+                          onClose?.();
+                        }
+                      }}
                       className={({ isActive }) =>
                         `flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition
                         ${
@@ -82,7 +99,7 @@ export default function Sidebar() {
           <svg className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
           </svg>
-          <span>Your data never leaves your browser. All processing happens locally.</span>
+          <span>Built for privacy, your data never leaves your browser.<br /><br />All processing happens locally using JavaScript and ExcelJS — no server, no API, no backend, no analytics, no tracking. Your files stay entirely on the client side, visible only to you.</span>
         </div>
       </div>
     </aside>
