@@ -60,6 +60,54 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
     negative: "#F87171",
   };
 
+  // Track bar positions for connector lines between bars
+  const barPositions: { x: number; y: number; width: number; height: number; type: string }[] = [];
+
+  const renderBarWithConnector = (props: any) => {
+    const { x, y, width, height, fill, index } = props;
+    if (index == null || !data[index]) return null;
+    const entry = data[index];
+
+    barPositions[index] = { x, y, width, height, type: entry.type };
+
+    // Connector line from previous bar
+    let connector = null;
+    if (index > 0 && barPositions[index - 1]) {
+      const prev = barPositions[index - 1];
+      const cy = prev.type === "negative" ? prev.y + prev.height : prev.y;
+      connector = (
+        <line
+          x1={prev.x + prev.width}
+          y1={cy}
+          x2={x}
+          y2={cy}
+          stroke="#9CA3AF"
+          strokeWidth={1}
+          strokeDasharray="4 3"
+        />
+      );
+    }
+
+    if (Math.abs(height) < 1) {
+      return <g>{connector}</g>;
+    }
+
+    const r = Math.min(3, width / 2, Math.abs(height) / 2);
+    const isNeg = entry.type === "negative";
+
+    // Negative bars: rounded bottom corners; others: rounded top corners
+    const barPath = isNeg
+      ? `M${x},${y}H${x + width}V${y + height - r}Q${x + width},${y + height},${x + width - r},${y + height}H${x + r}Q${x},${y + height},${x},${y + height - r}Z`
+      : `M${x},${y + height}V${y + r}Q${x},${y},${x + r},${y}H${x + width - r}Q${x + width},${y},${x + width},${y + r}V${y + height}Z`;
+
+    return (
+      <g>
+        {connector}
+        <path d={barPath} fill={fill} />
+      </g>
+    );
+  };
+
   const renderLabel = (props: any) => {
     const { x, y, width, height, index } = props;
     if (index == null || !data[index]) return null;
@@ -122,7 +170,7 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
               fontSize: 12,
             }}
           />
-          <Bar dataKey="range" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+          <Bar dataKey="range" shape={renderBarWithConnector} isAnimationActive={false}>
             {data.map((entry, idx) => (
               <Cell key={idx} fill={colors[entry.type]} />
             ))}
