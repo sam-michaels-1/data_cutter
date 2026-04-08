@@ -86,7 +86,24 @@ type Action =
   | { type: "GENERATE_SUCCESS"; downloadId: string }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "SET_ERROR"; error: string | null }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | {
+      type: "LOAD_SAMPLE";
+      sessionId: string;
+      filename: string;
+      sheetNames: string[];
+      selectedSheet: string;
+      columns: ColumnInfo[];
+      dateColumns: string[];
+      customerNameCol: string;
+      attributes: AttributeCol[];
+      scaleFactor: number;
+      rowCount: number;
+      detectedFrequency: DataFrequency;
+      headerRow: number;
+      dateHeaderRow?: number;
+      selectedAttributes: { display_name: string; letter: string }[];
+    };
 
 function granularitiesForFrequency(freq: DataFrequency | null): Granularity[] {
   if (freq === "monthly") return ["monthly", "quarterly", "annual"];
@@ -245,6 +262,33 @@ function reducer(state: WizardState, action: Action): WizardState {
         isLoading: false,
         isGenerating: false,
       };
+
+    case "LOAD_SAMPLE": {
+      const freq = action.detectedFrequency;
+      return {
+        ...INITIAL_STATE,
+        currentStep: 7,
+        sessionId: action.sessionId,
+        filename: action.filename,
+        sheetNames: action.sheetNames,
+        selectedSheet: action.selectedSheet,
+        inputFormat: "cleaned" as InputFormat,
+        columns: action.columns,
+        dateColumns: action.dateColumns,
+        customerNameCol: action.customerNameCol,
+        detectedAttributes: action.attributes,
+        scaleFactor: action.scaleFactor,
+        rowCount: action.rowCount,
+        detectedFrequency: freq,
+        dataFrequency: freq,
+        headerRow: action.headerRow,
+        dateHeaderRow: action.dateHeaderRow ?? null,
+        dataType: "arr",
+        outputGranularities: granularitiesForFrequency(freq),
+        selectedAttributes: action.selectedAttributes,
+        fiscalYearEndMonth: 12,
+      };
+    }
 
     case "RESET":
       return INITIAL_STATE;

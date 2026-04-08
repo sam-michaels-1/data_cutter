@@ -172,8 +172,11 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
         <div className="flex mt-1 overflow-x-clip">
           {data.columns.map((col, ci) => {
             const widthPct = Math.max(col.xPct * 100, 2);
+            const isLast = ci === data.columns.length - 1;
+            // Right-align the last column only when it's too narrow for its label
+            const align = isLast && widthPct < 8 ? "text-right" : "text-center";
             return (
-              <div key={ci} className="text-center" style={{ width: `${widthPct}%` }}>
+              <div key={ci} className={`${align} min-w-0`} style={{ width: `${widthPct}%` }}>
                 <div className="text-[10px] text-gray-600 font-medium whitespace-nowrap px-0.5">{col.xLabel}</div>
                 <div className="text-[9px] text-gray-400 whitespace-nowrap px-0.5">
                   {formatValue(col.xTotal)} / {(col.xPct * 100).toFixed(1)}%
