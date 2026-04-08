@@ -82,8 +82,8 @@ export default function CustomersPage() {
   const { granularity, available_granularities, attribute_options } = data;
 
   return (
-    <div className="p-4 space-y-3 max-w-[1600px]">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="p-3 sm:p-4 space-y-3 max-w-[1600px]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">Customer Ranking</h1>
           <p className="text-sm text-gray-500">
@@ -91,7 +91,7 @@ export default function CustomersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           {/* Top-N selector */}
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {TOP_N_OPTIONS.map((n) => (
@@ -147,16 +147,16 @@ export default function CustomersPage() {
                 <th className="text-left py-2 pr-2 w-8">#</th>
                 <th className="text-left py-2 pr-4">Customer</th>
                 {attrKeys.map((k) => (
-                  <th key={k} className="text-left py-2 pr-4">{k}</th>
+                  <th key={k} className="hidden sm:table-cell text-left py-2 pr-4">{k}</th>
                 ))}
-                <th className="text-left py-2 pr-4">Cohort</th>
+                <th className="hidden sm:table-cell text-left py-2 pr-4">Cohort</th>
                 <th className="text-right py-2 pr-4">Current ARR</th>
                 <th className="text-right py-2 pr-4">Change</th>
-                <th className="text-right py-2 pr-4">% of Total</th>
-                <th className="text-center py-2 pr-4 w-20">Trend</th>
+                <th className="hidden sm:table-cell text-right py-2 pr-4">% of Total</th>
+                <th className="hidden sm:table-cell text-center py-2 pr-4 w-20">Trend</th>
                 <th className="text-center py-2 pr-4">Status</th>
                 {periods.map((p) => (
-                  <th key={p} className="text-right py-2 pr-3 whitespace-nowrap">
+                  <th key={p} className="hidden md:table-cell text-right py-2 pr-3 whitespace-nowrap">
                     {p}
                   </th>
                 ))}
@@ -172,11 +172,11 @@ export default function CustomersPage() {
                       {c.name}
                     </td>
                     {attrKeys.map((k) => (
-                      <td key={k} className="py-2.5 pr-4 text-gray-600 whitespace-nowrap">
+                      <td key={k} className="hidden sm:table-cell py-2.5 pr-4 text-gray-600 whitespace-nowrap">
                         {c.attributes[k] || "—"}
                       </td>
                     ))}
-                    <td className="py-2.5 pr-4 text-gray-600 whitespace-nowrap">{c.cohort || "—"}</td>
+                    <td className="hidden sm:table-cell py-2.5 pr-4 text-gray-600 whitespace-nowrap">{c.cohort || "—"}</td>
                     <td className="py-2.5 pr-4 text-right font-mono text-gray-800">
                       {formatCurrency(c.arr, scaleFactor)}
                     </td>
@@ -197,10 +197,10 @@ export default function CustomersPage() {
                         ? `(${(Math.abs(c.change_pct) * 100).toFixed(1)}%)`
                         : `+${(c.change_pct * 100).toFixed(1)}%`}
                     </td>
-                    <td className="py-2.5 pr-4 text-right font-mono text-gray-600">
+                    <td className="hidden sm:table-cell py-2.5 pr-4 text-right font-mono text-gray-600">
                       {(c.pct_of_total * 100).toFixed(1)}%
                     </td>
-                    <td className="py-2.5 pr-4">
+                    <td className="hidden sm:table-cell py-2.5 pr-4">
                       <div className="w-20 h-7 mx-auto">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={sparkData}>
@@ -227,7 +227,7 @@ export default function CustomersPage() {
                     {c.trend.map((val, i) => (
                       <td
                         key={i}
-                        className="py-2.5 pr-3 text-right font-mono text-gray-600 whitespace-nowrap"
+                        className="hidden md:table-cell py-2.5 pr-3 text-right font-mono text-gray-600 whitespace-nowrap"
                       >
                         {val > 0 ? formatCurrency(val, scaleFactor) : "—"}
                       </td>

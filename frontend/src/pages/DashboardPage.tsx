@@ -69,9 +69,9 @@ export default function DashboardPage() {
   const metricLabel = data_type === "revenue" ? "Revenue" : "ARR";
 
   return (
-    <div className="p-4 space-y-3 max-w-[1600px]">
+    <div className="p-3 sm:p-4 space-y-3 max-w-[1600px]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
         {available_granularities?.length > 1 && (
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">

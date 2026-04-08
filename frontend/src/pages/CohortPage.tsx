@@ -80,7 +80,7 @@ export default function CohortPage() {
       : "Customer Count by Cohort";
 
   return (
-    <div className="p-4 space-y-3 max-w-[1600px]">
+    <div className="p-3 sm:p-4 space-y-3 max-w-[1600px]">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Cohort Analysis</h1>
         <p className="text-sm text-gray-500">
@@ -88,24 +88,26 @@ export default function CohortPage() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         {/* Metric toggle */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
-          {BASE_METRICS.map(({ key, label: rawLabel }) => {
-          const label = rawLabel.replace("{metric}", metricLabel);
-          return (
-            <button
-              key={key}
-              onClick={() => setMetric(key)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
-                key === metric
-                  ? "bg-teal-600 text-white shadow"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {label}
-            </button>
-          );})}
+        <div className="overflow-x-auto">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-max sm:w-auto">
+            {BASE_METRICS.map(({ key, label: rawLabel }) => {
+            const label = rawLabel.replace("{metric}", metricLabel);
+            return (
+              <button
+                key={key}
+                onClick={() => setMetric(key)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition whitespace-nowrap ${
+                  key === metric
+                    ? "bg-teal-600 text-white shadow"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {label}
+              </button>
+            );})}
+          </div>
         </div>
 
         {/* Granularity toggle */}

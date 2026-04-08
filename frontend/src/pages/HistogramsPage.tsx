@@ -126,12 +126,12 @@ export default function HistogramsPage() {
   }
 
   return (
-    <div className="p-4 space-y-3 max-w-[1600px]">
+    <div className="p-3 sm:p-4 space-y-3 max-w-[1600px]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Histograms & Distributions</h1>
-          <p className="text-sm text-gray-500">Explore data distributions and segment analysis</p>
+          <p className="hidden sm:block text-sm text-gray-500">Explore data distributions and segment analysis</p>
         </div>
         {available_granularities.length > 1 && (
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
@@ -160,7 +160,7 @@ export default function HistogramsPage() {
 
       {/* B & C) Mekko Charts */}
       <div className="space-y-2">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Mekko Axes</span>
           <AxisSelector label="X-Axis" value={effectiveMekkoX} options={identifiers} onChange={handleMekkoXChange} />
           {identifiers.length > 1 && (
@@ -191,7 +191,7 @@ export default function HistogramsPage() {
 
       {/* F & G) Grids */}
       <div className="space-y-2">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Grid Axes</span>
           <AxisSelector label="X-Axis" value={effectiveGridX} options={identifiers} onChange={handleGridXChange} />
           {identifiers.length > 1 && (

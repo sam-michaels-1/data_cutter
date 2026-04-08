@@ -126,16 +126,16 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
       <table className="text-xs border-collapse">
         <thead>
           <tr>
-            <th className="px-3 py-2 text-left text-gray-500 font-semibold uppercase tracking-wide sticky left-0 bg-white z-10 whitespace-nowrap">
+            <th className="px-2 sm:px-3 py-2 text-left text-gray-500 font-semibold uppercase tracking-wide sticky left-0 bg-white z-10 whitespace-nowrap">
               Cohort
             </th>
-            <th className="px-2 py-2 text-right text-gray-500 font-semibold whitespace-nowrap">
+            <th className="px-1.5 sm:px-2 py-2 text-right text-gray-500 font-semibold whitespace-nowrap">
               {sizeHeader}
             </th>
             {headers.map((h) => (
               <th
                 key={h}
-                className="px-3 py-2 text-center text-gray-500 font-medium whitespace-nowrap"
+                className="px-2 sm:px-3 py-2 text-center text-gray-500 font-medium whitespace-nowrap"
               >
                 {h}
               </th>
@@ -145,10 +145,10 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
         <tbody>
           {aligned.map(({ c, shifted }) => (
             <tr key={c.label} className="border-t border-gray-200">
-              <td className="px-3 py-1.5 font-medium text-gray-800 sticky left-0 bg-white z-10 whitespace-nowrap">
+              <td className="px-2 sm:px-3 py-1.5 font-medium text-gray-800 sticky left-0 bg-white z-10 whitespace-nowrap">
                 {c.label}
               </td>
-              <td className="px-2 py-1.5 text-right text-gray-500 font-mono whitespace-nowrap">
+              <td className="px-1.5 sm:px-2 py-1.5 text-right text-gray-500 font-mono whitespace-nowrap">
                 {metric === "ndr" || metric === "arr"
                   ? formatCurrency(c.starting_arr, scaleFactor)
                   : c.count.toLocaleString()}
@@ -158,7 +158,7 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
                 return (
                   <td
                     key={i}
-                    className={`px-3 py-1.5 text-center font-mono rounded-sm ${getCellColor(val, metric)}`}
+                    className={`px-2 sm:px-3 py-1.5 text-center font-mono rounded-sm ${getCellColor(val, metric)}`}
                   >
                     {formatValue(val, metric, scaleFactor)}
                   </td>
@@ -171,31 +171,31 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
           {(metric === "ndr" || metric === "logo_retention") && (
             <>
               <tr className="border-t-2 border-gray-300">
-                <td colSpan={2} className="px-3 py-1.5 font-semibold text-gray-600 sticky left-0 bg-white z-10 italic">
+                <td colSpan={2} className="px-2 sm:px-3 py-1.5 font-semibold text-gray-600 sticky left-0 bg-white z-10 italic">
                   Average
                 </td>
                 {avgRow.map((v, i) => (
-                  <td key={i} className={`px-3 py-1.5 text-center font-mono italic ${getCellColor(v, metric)}`}>
+                  <td key={i} className={`px-2 sm:px-3 py-1.5 text-center font-mono italic ${getCellColor(v, metric)}`}>
                     {formatValue(v, metric, scaleFactor)}
                   </td>
                 ))}
               </tr>
               <tr className="border-t border-gray-200">
-                <td colSpan={2} className="px-3 py-1.5 font-semibold text-gray-600 sticky left-0 bg-white z-10 italic">
+                <td colSpan={2} className="px-2 sm:px-3 py-1.5 font-semibold text-gray-600 sticky left-0 bg-white z-10 italic">
                   Median
                 </td>
                 {medianRow.map((v, i) => (
-                  <td key={i} className={`px-3 py-1.5 text-center font-mono italic ${getCellColor(v, metric)}`}>
+                  <td key={i} className={`px-2 sm:px-3 py-1.5 text-center font-mono italic ${getCellColor(v, metric)}`}>
                     {formatValue(v, metric, scaleFactor)}
                   </td>
                 ))}
               </tr>
               <tr className="border-t border-gray-200">
-                <td colSpan={2} className="px-3 py-1.5 font-bold text-gray-800 sticky left-0 bg-white z-10 italic">
+                <td colSpan={2} className="px-2 sm:px-3 py-1.5 font-bold text-gray-800 sticky left-0 bg-white z-10 italic whitespace-nowrap">
                   Dollar-Weighted Avg
                 </td>
                 {dwAvgRow.map((v, i) => (
-                  <td key={i} className={`px-3 py-1.5 text-center font-mono font-bold italic ${getCellColor(v, metric)}`}>
+                  <td key={i} className={`px-2 sm:px-3 py-1.5 text-center font-mono font-bold italic ${getCellColor(v, metric)}`}>
                     {formatValue(v, metric, scaleFactor)}
                   </td>
                 ))}

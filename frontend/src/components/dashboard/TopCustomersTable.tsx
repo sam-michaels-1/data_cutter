@@ -31,12 +31,12 @@ export default function TopCustomersTable({ customers, scaleFactor, metricLabel 
               <th className="text-left py-2 pr-2 w-8">#</th>
               <th className="text-left py-2 pr-4">Customer</th>
               {attrKeys.map((k) => (
-                <th key={k} className="text-left py-2 pr-4">{k}</th>
+                <th key={k} className="hidden sm:table-cell text-left py-2 pr-4">{k}</th>
               ))}
-              <th className="text-left py-2 pr-4">Cohort</th>
+              <th className="hidden sm:table-cell text-left py-2 pr-4">Cohort</th>
               <th className="text-right py-2 pr-4">{metricLabel}</th>
-              <th className="text-right py-2 pr-4">Change</th>
-              <th className="text-right py-2 pr-4">% of Total</th>
+              <th className="hidden sm:table-cell text-right py-2 pr-4">Change</th>
+              <th className="hidden sm:table-cell text-right py-2 pr-4">% of Total</th>
               <th className="text-center py-2 pr-4 w-16">Trend</th>
               <th className="text-center py-2">Status</th>
             </tr>
@@ -55,16 +55,16 @@ export default function TopCustomersTable({ customers, scaleFactor, metricLabel 
                     {c.name}
                   </td>
                   {attrKeys.map((k) => (
-                    <td key={k} className="py-2 pr-4 text-gray-600 whitespace-nowrap">
+                    <td key={k} className="hidden sm:table-cell py-2 pr-4 text-gray-600 whitespace-nowrap">
                       {c.attributes[k] || "—"}
                     </td>
                   ))}
-                  <td className="py-2 pr-4 text-gray-600 whitespace-nowrap">{c.cohort || "—"}</td>
+                  <td className="hidden sm:table-cell py-2 pr-4 text-gray-600 whitespace-nowrap">{c.cohort || "—"}</td>
                   <td className="py-2 pr-4 text-right font-mono text-gray-800">
                     {formatCurrency(c.arr, scaleFactor)}
                   </td>
                   <td
-                    className={`py-2 pr-4 text-right font-mono ${
+                    className={`hidden sm:table-cell py-2 pr-4 text-right font-mono ${
                       changePct == null
                         ? "text-gray-400"
                         : changePct > 0
@@ -80,7 +80,7 @@ export default function TopCustomersTable({ customers, scaleFactor, metricLabel 
                       ? `(${(Math.abs(changePct) * 100).toFixed(1)}%)`
                       : `+${(changePct * 100).toFixed(1)}%`}
                   </td>
-                  <td className="py-2 pr-4 text-right font-mono text-gray-600">
+                  <td className="hidden sm:table-cell py-2 pr-4 text-right font-mono text-gray-600">
                     {(c.pct_of_total * 100).toFixed(1)}%
                   </td>
                   <td className="py-2 pr-4">
