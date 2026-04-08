@@ -236,6 +236,18 @@ function buildPctBuckets(values: number[], count: number): HistogramBucket[] {
   return buckets;
 }
 
+/** Sort labels chronologically for quarter strings (Q1'24, Q2'24, ...), fallback to locale for others. */
+function chronoSort(a: string, b: string): number {
+  const qRe = /^Q(\d)'(\d{2})$/;
+  const ma = qRe.exec(a), mb = qRe.exec(b);
+  if (ma && mb) {
+    const ya = Number(ma[2]), qa = Number(ma[1]);
+    const yb = Number(mb[2]), qb = Number(mb[1]);
+    return ya !== yb ? ya - yb : qa - qb;
+  }
+  return a.localeCompare(b);
+}
+
 function getIdentifierValue(
   custId: string,
   identifier: string,
@@ -276,7 +288,7 @@ function buildMekko(
   const yLabels = [...allYLabels].sort();
 
   const columns: MekkoColumn[] = [...xGroups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => chronoSort(a, b))
     .map(([xLabel, yMap]) => {
       let xTotal = 0;
       for (const v of yMap.values()) xTotal += v;
@@ -301,7 +313,7 @@ function buildMekko(
 function unifyGridColumns(grids: GridData[]): void {
   const allLabels = new Set<string>();
   for (const g of grids) for (const l of g.xLabels) allLabels.add(l);
-  const unified = [...allLabels].sort();
+  const unified = [...allLabels].sort(chronoSort);
 
   for (const g of grids) {
     if (g.xLabels.length === unified.length && g.xLabels.every((l, i) => l === unified[i])) continue;
@@ -341,7 +353,7 @@ function buildWeightedGrid(
     cells.get(key)!.arrs.push(arr);
   }
 
-  const xLabels = [...xSet].sort();
+  const xLabels = [...xSet].sort(chronoSort);
   const yLabels = [...ySet].sort();
 
   function weightedAvg(vals: number[], weights: number[]): number | null {
@@ -422,7 +434,7 @@ function buildAggregateGrowthGrid(
     cell.sumPrior += prior;
   }
 
-  const xLabels = [...xSet].sort();
+  const xLabels = [...xSet].sort(chronoSort);
   const yLabels = [...ySet].sort();
 
   const grid: (GridCell | null)[][] = [];
@@ -517,11 +529,16 @@ export function computeHistogramData(
   const cohortMap = buildCohortMap(pivot, periods);
   const attrLookup = buildAttrLookup(rawRows, attrNames);
 
-  // Build cohort attribute option
+  // Build cohort attribute option (capped to most recent 4 periods for cleaner display)
   const cohortValuesSet = new Set(cohortMap.values());
   const cohortValues = periods.filter(p => cohortValuesSet.has(p));
+  const MAX_COHORT_COLUMNS = 4;
+  const cappedCohortValues = cohortValues.length > MAX_COHORT_COLUMNS
+    ? cohortValues.slice(-MAX_COHORT_COLUMNS)
+    : cohortValues;
+  const cappedCohortSet = new Set(cappedCohortValues);
   const allAttributeOptions = [
-    { name: 'Cohort', values: cohortValues, multiSelect: true },
+    { name: 'Cohort', values: cappedCohortValues, multiSelect: true },
     ...attributeOptions,
   ];
 
@@ -621,9 +638,14 @@ export function computeHistogramData(
   const growthValues = [...custGrowthRate.values()];
   const growthHistogram = buildPctBuckets(growthValues, 10);
 
+  // Filter customers to capped cohorts when Cohort is on the axis
+  const mekkoActiveCustomers = effectiveMekkoX === 'Cohort'
+    ? activeCustomers.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+    : activeCustomers;
+
   // B) Mekko ARR
   const mekkoARR = buildMekko(
-    activeCustomers,
+    mekkoActiveCustomers,
     effectiveMekkoX,
     effectiveMekkoY,
     (cust) => (custLatestARR.get(cust) || 0) / sf,
@@ -633,7 +655,7 @@ export function computeHistogramData(
 
   // C) Mekko Customer Count
   const mekkoCount = buildMekko(
-    activeCustomers,
+    mekkoActiveCustomers,
     effectiveMekkoX,
     effectiveMekkoY,
     () => 1,
@@ -672,8 +694,11 @@ export function computeHistogramData(
   const priorPeriodForGrowth = (latestDerived && periods.indexOf(latestDerived) >= yoyOffset)
     ? periods[periods.indexOf(latestDerived) - yoyOffset] : '';
   const allRelevantCustomers = [...new Set([...activeCustomers, ...priorPeriodCustomers])];
+  const gridRelevantCustomers = effectiveGridX === 'Cohort'
+    ? allRelevantCustomers.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+    : allRelevantCustomers;
   const growthGrid = buildAggregateGrowthGrid(
-    allRelevantCustomers,
+    gridRelevantCustomers,
     effectiveGridX,
     effectiveGridY,
     (cust) => getPivotValue(pivot, cust, latestPeriod),
@@ -684,8 +709,11 @@ export function computeHistogramData(
 
   // G) Net retention grid (ARR-weighted)
   const custsWithRetention = priorPeriodCustomers.filter(c => custNetRetention.has(c));
+  const gridCustsWithRetention = effectiveGridX === 'Cohort'
+    ? custsWithRetention.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+    : custsWithRetention;
   const netRetentionGrid = buildWeightedGrid(
-    custsWithRetention,
+    gridCustsWithRetention,
     effectiveGridX,
     effectiveGridY,
     (cust) => custNetRetention.get(cust) ?? null,
@@ -695,7 +723,7 @@ export function computeHistogramData(
   );
 
   const lossRetentionGrid = buildWeightedGrid(
-    custsWithRetention,
+    gridCustsWithRetention,
     effectiveGridX,
     effectiveGridY,
     (cust) => custLossRetention.get(cust) ?? null,
