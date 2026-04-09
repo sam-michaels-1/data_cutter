@@ -139,6 +139,15 @@ export function computeCleanLayout(numAttrs: number, numDates: number, yoyOffset
   };
 }
 
+/**
+ * Normalize an ExcelJS Date (UTC-midnight) to local-midnight so that
+ * getMonth()/getFullYear() return the intended calendar values regardless
+ * of the user's timezone. Safe/idempotent for dates already in local time.
+ */
+export function normalizeExcelDate(d: Date): Date {
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
 /** Return display label for a granularity level. */
 export function granularityLabel(granularity: string): string {
   return { monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual' }[granularity] || granularity;

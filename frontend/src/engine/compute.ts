@@ -5,6 +5,7 @@
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
 import { parseHeaderDate } from './detect';
+import { normalizeExcelDate } from './utils';
 
 function colNumFromLetter(letter: string): number {
   let result = 0;
@@ -51,7 +52,7 @@ export function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
     if (!(dateVal instanceof Date)) return;
 
     const arr = typeof arrVal === 'number' ? arrVal : (arrVal ? parseFloat(String(arrVal)) || 0 : 0);
-    const record: RawRecord = { date: dateVal, customer_id: String(custVal).trim(), arr };
+    const record: RawRecord = { date: normalizeExcelDate(dateVal as Date), customer_id: String(custVal).trim(), arr };
 
     for (const [name, colIdx] of Object.entries(attrCols)) {
       const val = row.getCell(colIdx).value;
@@ -86,7 +87,7 @@ export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[]
     const val = headerRow.getCell(colNum).value;
     let date: Date | null = null;
     if (val instanceof Date) {
-      date = val;
+      date = normalizeExcelDate(val);
     } else if (val != null) {
       date = parseHeaderDate(String(val));
     }

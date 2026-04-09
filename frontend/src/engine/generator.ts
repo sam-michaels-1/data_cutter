@@ -4,7 +4,7 @@
  */
 import ExcelJS from 'exceljs';
 import type { EngineConfig, FilterBlock, CleanTabResult } from './types';
-import { getYoyOffset } from './utils';
+import { getYoyOffset, normalizeExcelDate } from './utils';
 import { parseHeaderDate } from './detect';
 import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFromTable } from './clean_data';
 import { generateRetentionTab } from './retention';
@@ -288,7 +288,7 @@ function extractUniques(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDa
       if (dateVal instanceof Date) {
         const t = dateVal.getTime();
         dates.add(t);
-        dateMap.set(t, dateVal);
+        dateMap.set(t, normalizeExcelDate(dateVal));
       }
     }
     if (custVal != null) {
@@ -316,7 +316,7 @@ function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): {
     const colIdx = colNumFromLetter(letter);
     const val = headerRow.getCell(colIdx).value;
     if (val instanceof Date) {
-      dates.push(val);
+      dates.push(normalizeExcelDate(val));
     } else if (val != null) {
       const parsed = parseHeaderDate(String(val));
       if (parsed) {

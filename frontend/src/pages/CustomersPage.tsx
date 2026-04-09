@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
@@ -17,6 +18,7 @@ const TOP_N_OPTIONS = [10, 15, 25, 50];
 
 export default function CustomersPage() {
   const { sessionId } = useSession();
+  const navigate = useNavigate();
   const { data, loading, error, refetch } = useDashboard(sessionId);
   const [filters, setFilters] = useState<Filters>({});
   const [topN, setTopN] = useState(10);
@@ -40,7 +42,13 @@ export default function CustomersPage() {
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="text-center text-gray-500">
           <p className="text-lg font-medium">No data imported yet</p>
-          <p className="text-sm mt-1">Go to Import to upload your data file.</p>
+          <p className="text-sm mt-1">Please return to the Import tab to load your data.</p>
+          <button
+            onClick={() => navigate("/import")}
+            className="mt-3 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition"
+          >
+            Go to Import
+          </button>
         </div>
       </div>
     );
@@ -60,13 +68,14 @@ export default function CustomersPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
-        <div className="text-center text-red-500">
-          <p>{error}</p>
+        <div className="text-center text-gray-500">
+          <p className="text-lg font-medium">No data loaded</p>
+          <p className="text-sm mt-1">Please return to the Import tab to load your data.</p>
           <button
-            onClick={() => refetch()}
-            className="mt-3 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm"
+            onClick={() => navigate("/import")}
+            className="mt-3 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition"
           >
-            Retry
+            Go to Import
           </button>
         </div>
       </div>
