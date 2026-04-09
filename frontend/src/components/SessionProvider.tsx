@@ -1,6 +1,14 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import ExcelJS from "exceljs";
 import type { Workbook } from "exceljs";
 import type { EngineConfig } from "../engine/types";
+import { setCurrentWorkbook, setCurrentConfig } from "../api/client";
+import {
+  isCacheValid,
+  loadFileFromIDB,
+  loadEngineConfig,
+  clearAllStorage,
+} from "../api/storage";
 
 interface SessionContextValue {
   sessionId: string | null;
@@ -11,6 +19,7 @@ interface SessionContextValue {
   setConfig: (config: EngineConfig | null) => void;
   downloadUrl: string | null;
   setDownloadUrl: (url: string | null) => void;
+  restoring: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue>({
@@ -22,6 +31,7 @@ const SessionContext = createContext<SessionContextValue>({
   setConfig: () => {},
   downloadUrl: null,
   setDownloadUrl: () => {},
+  restoring: true,
 });
 
 export function useSession() {
@@ -42,6 +52,53 @@ export default function SessionProvider({
   const [workbook, setWorkbook] = useState<Workbook | null>(null);
   const [config, setConfig] = useState<EngineConfig | null>(null);
   const [downloadUrl, setDownloadUrlState] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(true);
+
+  // Restore session from IndexedDB + sessionStorage on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restore() {
+      try {
+        if (!isCacheValid()) {
+          clearAllStorage();
+          return;
+        }
+
+        const stored = await loadFileFromIDB();
+        if (!stored || cancelled) {
+          if (!cancelled) clearAllStorage();
+          return;
+        }
+
+        // Re-parse workbook from stored bytes
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(stored.fileBuffer);
+        if (cancelled) return;
+
+        setCurrentWorkbook(wb);
+        setWorkbook(wb);
+
+        // Restore engine config
+        const savedConfig = loadEngineConfig();
+        if (savedConfig) {
+          setCurrentConfig(savedConfig);
+          setConfig(savedConfig);
+        }
+      } catch (err) {
+        console.warn("Session restore failed, starting fresh:", err);
+        if (!cancelled) {
+          clearAllStorage();
+          setSessionIdState(null);
+        }
+      } finally {
+        if (!cancelled) setRestoring(false);
+      }
+    }
+
+    restore();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSetSessionId = useCallback((id: string | null) => {
     setSessionIdState(id);
@@ -71,9 +128,19 @@ export default function SessionProvider({
         setConfig,
         downloadUrl,
         setDownloadUrl: handleSetDownloadUrl,
+        restoring,
       }}
     >
-      {children}
+      {restoring ? (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center text-gray-500">
+            <div className="animate-spin h-8 w-8 border-2 border-teal-500 border-t-transparent rounded-full mx-auto mb-3" />
+            <p className="text-sm">Restoring session...</p>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </SessionContext.Provider>
   );
 }

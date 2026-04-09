@@ -13,6 +13,7 @@ import { detectColumns as engineDetect, detectTableColumns as engineDetectTable 
 import type { DetectTableResult } from "../engine/detect";
 import { buildEngineConfig } from "../engine/config_builder";
 import { generateDataPack } from "../engine/generator";
+import { saveFileToIDB, saveEngineConfig } from "./storage";
 
 // In-memory store for the current session's workbook
 let currentWorkbook: ExcelJS.Workbook | null = null;
@@ -27,12 +28,21 @@ export function getCurrentConfig(): import("../engine/types").EngineConfig | nul
   return currentConfig;
 }
 
+export function setCurrentWorkbook(wb: ExcelJS.Workbook | null): void {
+  currentWorkbook = wb;
+}
+
+export function setCurrentConfig(config: import("../engine/types").EngineConfig | null): void {
+  currentConfig = config;
+}
+
 export async function uploadFile(file: File): Promise<UploadResponse> {
   const arrayBuffer = await file.arrayBuffer();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(arrayBuffer);
 
   currentWorkbook = wb;
+  saveFileToIDB(arrayBuffer, file.name);
 
   const sheetNames = wb.worksheets.map((ws) => ws.name);
   const sessionId = `local-${Date.now()}`;
@@ -126,6 +136,7 @@ export async function generate(
   }
 
   currentConfig = config;
+  saveEngineConfig(config);
 
   // Generate the Excel workbook
   const outputWb = await generateDataPack(config, currentWorkbook);

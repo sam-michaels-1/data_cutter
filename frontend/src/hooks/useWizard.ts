@@ -1,4 +1,4 @@
-import { useReducer, useCallback } from "react";
+import { useReducer, useCallback, useEffect } from "react";
 import type {
   WizardState,
   DataType,
@@ -11,6 +11,7 @@ import type {
   ColumnInfo,
   AttributeCol,
 } from "../types/wizard";
+import { loadWizardState, saveWizardState } from "../api/storage";
 
 const INITIAL_STATE: WizardState = {
   currentStep: 1,
@@ -299,7 +300,17 @@ function reducer(state: WizardState, action: Action): WizardState {
 }
 
 export function useWizard() {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE, (initial) => {
+    const saved = loadWizardState();
+    return saved ?? initial;
+  });
+
+  // Persist wizard state to sessionStorage on every change
+  useEffect(() => {
+    if (state.sessionId) {
+      saveWizardState(state);
+    }
+  }, [state]);
 
   const nextStep = useCallback(
     () => dispatch({ type: "SET_STEP", step: state.currentStep + 1 }),

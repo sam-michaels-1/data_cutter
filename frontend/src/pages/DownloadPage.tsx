@@ -20,12 +20,33 @@ export default function DownloadPage() {
     URL.revokeObjectURL(url);
   }, []);
 
+  const blob = getDownloadBlob();
+
   if (!sessionId) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="text-center text-gray-500">
           <p className="text-lg font-medium">No data imported yet</p>
           <p className="text-sm mt-1">Please return to the Import tab to load your data.</p>
+          <button
+            onClick={() => navigate("/import")}
+            className="mt-3 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition"
+          >
+            Go to Import
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!blob) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[60vh]">
+        <div className="text-center text-gray-500">
+          <p className="text-lg font-medium">Session restored</p>
+          <p className="text-sm mt-1">
+            The download file needs to be re-generated after a page refresh.
+          </p>
           <button
             onClick={() => navigate("/import")}
             className="mt-3 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition"
