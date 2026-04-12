@@ -148,6 +148,11 @@ export function normalizeExcelDate(d: Date): Date {
   return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
+/** Format a local Date as "YYYY-MM-DD" without UTC conversion (avoids toISOString() timezone shift). */
+export function toLocalISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /** Return display label for a granularity level. */
 export function granularityLabel(granularity: string): string {
   return { monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual' }[granularity] || granularity;

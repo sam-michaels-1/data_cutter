@@ -5,7 +5,7 @@
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
 import { parseHeaderDate } from './detect';
-import { normalizeExcelDate } from './utils';
+import { normalizeExcelDate, toLocalISODate } from './utils';
 
 function colNumFromLetter(letter: string): number {
   let result = 0;
@@ -167,7 +167,7 @@ export function aggregateToGranularity(
       if (!existing || val.maxDate > existing) periodMaxDates.set(label, val.maxDate);
     }
     for (const [label, date] of periodMaxDates) {
-      periodDateMap[label] = date.toISOString().split('T')[0];
+      periodDateMap[label] = toLocalISODate(date);
     }
 
   } else if (granularity === 'quarterly') {
@@ -200,7 +200,7 @@ export function aggregateToGranularity(
       if (!existing || val.maxDate > existing) periodMaxDates.set(label, val.maxDate);
     }
     for (const [label, date] of periodMaxDates) {
-      periodDateMap[label] = date.toISOString().split('T')[0];
+      periodDateMap[label] = toLocalISODate(date);
     }
 
   } else {
@@ -233,7 +233,7 @@ export function aggregateToGranularity(
       if (!existing || val.maxDate > existing) periodMaxDates.set(label, val.maxDate);
     }
     for (const [label, date] of periodMaxDates) {
-      periodDateMap[label] = date.toISOString().split('T')[0];
+      periodDateMap[label] = toLocalISODate(date);
     }
   }
 

@@ -29,6 +29,14 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
 
   const formatValue = (v: number) => valueType === "arr" ? formatCurrency(v, scaleFactor) : v.toLocaleString();
 
+  // Normalize column widths so they sum to exactly 100% even with minimum-width floors
+  const colWidths = useMemo(() => {
+    const raw = data.columns.map(c => Math.max(c.xPct * 100, 8));
+    const total = raw.reduce((s, w) => s + w, 0);
+    if (total === 0) return raw;
+    return raw.map(w => (w / total) * 100);
+  }, [data.columns]);
+
   // Compute Y-axis totals for summary table
   const yTotals = useMemo(() => {
     const totals = new Map<string, number>();
@@ -58,11 +66,9 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
     if (!stack || stack.value <= 0) return null;
 
     // Horizontal: center of the hovered column
-    const colWidths = data.columns.map(c => Math.max(c.xPct * 100, 2));
-    const totalW = colWidths.reduce((s, w) => s + w, 0);
     let cumulativeW = 0;
     for (let i = 0; i < hovered.col; i++) cumulativeW += colWidths[i];
-    const leftPct = ((cumulativeW + colWidths[hovered.col] / 2) / totalW) * 100;
+    const leftPct = cumulativeW + colWidths[hovered.col] / 2;
 
     // Vertical: top edge of hovered segment (measured from bottom)
     // flex-col-reverse means stacks[0] is at bottom, stacks[n-1] at top
@@ -78,7 +84,7 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
     else if (leftPct > 85) translateX = '-100%'; // near right edge: align right
 
     return { col, stack, leftPct, bottomPct, translateX };
-  }, [hovered, data]);
+  }, [hovered, data, colWidths]);
 
   if (data.columns.length === 0) {
     return (
@@ -110,12 +116,11 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
         <div className="relative">
           <div className="flex h-[220px] border border-gray-200 rounded-md overflow-hidden">
             {data.columns.map((col, ci) => {
-              const widthPct = Math.max(col.xPct * 100, 2);
               return (
                 <div
                   key={ci}
                   className="flex flex-col-reverse relative border-r border-gray-100 last:border-r-0"
-                  style={{ width: `${widthPct}%` }}
+                  style={{ width: `${colWidths[ci]}%` }}
                 >
                   {col.stacks.map((stack, si) => {
                     if (stack.value <= 0) return null;
@@ -134,7 +139,7 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
                         onMouseLeave={() => setHovered(null)}
                       >
                         {/* Label inside segment if large enough */}
-                        {heightPct > 10 && widthPct > 6 && (
+                        {heightPct > 10 && colWidths[ci] > 6 && (
                           <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-medium drop-shadow-sm">
                             {(stack.pct * 100).toFixed(0)}%
                           </span>
@@ -171,12 +176,11 @@ export default function MekkoChart({ data, title, scaleFactor, valueType, metric
         {/* X-axis labels */}
         <div className="flex mt-1 overflow-x-clip">
           {data.columns.map((col, ci) => {
-            const widthPct = Math.max(col.xPct * 100, 2);
             const isLast = ci === data.columns.length - 1;
             // Right-align the last column only when it's too narrow for its label
-            const align = isLast && widthPct < 8 ? "text-right" : "text-center";
+            const align = isLast && colWidths[ci] < 8 ? "text-right" : "text-center";
             return (
-              <div key={ci} className={`${align} min-w-0`} style={{ width: `${widthPct}%` }}>
+              <div key={ci} className={`${align} min-w-0`} style={{ width: `${colWidths[ci]}%` }}>
                 <div className="text-[10px] text-gray-600 font-medium whitespace-nowrap px-0.5">{col.xLabel}</div>
                 <div className="text-[9px] text-gray-400 whitespace-nowrap px-0.5">
                   {formatValue(col.xTotal)} / {(col.xPct * 100).toFixed(1)}%
