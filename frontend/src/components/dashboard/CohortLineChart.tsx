@@ -103,7 +103,7 @@ export default function CohortLineChart({ cohort, metric, scaleFactor, granulari
     return v.toLocaleString();
   };
 
-  const tooltipFormatter = (value: number) => {
+  const tooltipFormatter = (value: any) => {
     if (isPct) return `${Math.round(value * 100)}%`;
     if (isCurrency) return formatCurrency(value, scaleFactor);
     return value.toLocaleString();
