@@ -6,6 +6,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  LabelList,
 } from "recharts";
 import { formatCurrency } from "../../utils/format";
 
@@ -71,13 +72,34 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
     arr: arrOverTime[i],
   }));
 
+  const renderLabel = (props: any) => {
+    const { x, y, width, index } = props;
+    if (index == null || !data[index]) return null;
+    if (!isYearEnd(periods, index)) return null;
+
+    const formatted = formatCurrency(data[index].arr, scaleFactor);
+
+    return (
+      <text
+        x={(x as number) + (width as number) / 2}
+        y={(y as number) - 5}
+        textAnchor="middle"
+        fill="#374151"
+        fontSize={10}
+        fontWeight={500}
+      >
+        {formatted}
+      </text>
+    );
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-3">
       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
         {metricLabel} Over Time
       </h3>
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} margin={{ top: 5, right: 20, bottom: 30, left: 10 }}>
+        <BarChart data={data} margin={{ top: 20, right: 20, bottom: 30, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.8} vertical={false} />
           <XAxis
             dataKey="period"
@@ -108,7 +130,9 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
               fontSize: 12,
             }}
           />
-          <Bar dataKey="arr" fill="#14B8A6" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+          <Bar dataKey="arr" fill="#14B8A6" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+            <LabelList content={renderLabel} />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

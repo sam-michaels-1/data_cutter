@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
 import CohortHeatmap from "../components/dashboard/CohortHeatmap";
+import CohortLineChart from "../components/dashboard/CohortLineChart";
 import AttributeFilterBar from "../components/AttributeFilterBar";
 import type { CohortMetric, Filters } from "../types/dashboard";
 
@@ -153,6 +154,9 @@ export default function CohortPage() {
           {title}
         </h3>
         <CohortHeatmap cohort={cohort} metric={metric} scaleFactor={scale_factor} granularity={granularity} metricLabel={metricLabel} />
+        <div className="mt-4">
+          <CohortLineChart cohort={cohort} metric={metric} scaleFactor={scale_factor} granularity={granularity} metricLabel={metricLabel} />
+        </div>
       </div>
     </div>
   );
