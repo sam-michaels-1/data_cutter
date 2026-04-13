@@ -67,31 +67,17 @@ function CustomTick({ x, y, payload, growthPcts, periods }: {
 }
 
 export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scaleFactor, metricLabel = "ARR" }: Props) {
+  // Pre-compute bar labels to avoid Recharts index-mismatch when zero-value
+  // bars are skipped: LabelList re-indexes rendered bars from 0, so
+  // data[index] look-ups return the wrong entry. Using dataKey reads the
+  // label from each bar's own data entry instead.
   const data = periods.map((label, i) => ({
     period: label,
     arr: arrOverTime[i],
+    barLabel: isYearEnd(periods, i) && arrOverTime[i]
+      ? formatCurrency(arrOverTime[i], scaleFactor)
+      : undefined,
   }));
-
-  const renderLabel = (props: any) => {
-    const { x, y, width, index } = props;
-    if (index == null || !data[index]) return null;
-    if (!isYearEnd(periods, index)) return null;
-
-    const formatted = formatCurrency(data[index].arr, scaleFactor);
-
-    return (
-      <text
-        x={(x as number) + (width as number) / 2}
-        y={(y as number) - 5}
-        textAnchor="middle"
-        fill="#374151"
-        fontSize={10}
-        fontWeight={500}
-      >
-        {formatted}
-      </text>
-    );
-  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-3">
@@ -131,7 +117,14 @@ export default function ARRBarChart({ periods, arrOverTime, arrGrowthPcts, scale
             }}
           />
           <Bar dataKey="arr" fill="#14B8A6" radius={[3, 3, 0, 0]} isAnimationActive={false}>
-            <LabelList content={renderLabel} />
+            <LabelList
+              dataKey="barLabel"
+              position="top"
+              fill="#374151"
+              fontSize={10}
+              fontWeight={500}
+              offset={5}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
