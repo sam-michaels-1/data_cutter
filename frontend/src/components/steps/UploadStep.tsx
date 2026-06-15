@@ -1,6 +1,12 @@
 import { useCallback, useState } from "react";
 import type { WizardState } from "../../types/wizard";
-import { uploadFile, detectTableCols } from "../../api/client";
+import {
+  uploadFile,
+  detectTableCols,
+  setCurrentWorkbook,
+  setCurrentConfig,
+} from "../../api/client";
+import { clearAllStorage } from "../../api/storage";
 import FileUpload from "../ui/FileUpload";
 
 interface Props {
@@ -94,6 +100,14 @@ export default function UploadStep({ state, dispatch }: Props) {
     [dispatch]
   );
 
+  const handleReset = useCallback(() => {
+    // Clear persisted + in-memory workbook so a different file can be imported
+    clearAllStorage();
+    setCurrentWorkbook(null);
+    setCurrentConfig(null);
+    dispatch({ type: "RESET" });
+  }, [dispatch]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -109,6 +123,7 @@ export default function UploadStep({ state, dispatch }: Props) {
         onFileSelect={handleFileSelect}
         isLoading={state.isLoading || loadingSample}
         filename={state.filename}
+        onReset={handleReset}
       />
 
       {!state.filename && (

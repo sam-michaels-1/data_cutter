@@ -39,6 +39,19 @@ export interface DetectTableResult {
   detected_frequency: string;
   header_row: number;           // which row the headers were found in
   date_header_row?: number;     // row containing date headers (may differ from header_row for wide tables)
+  fiscal_labeled: boolean;      // true when date headers use fiscal labels (e.g. Q3-FY26) — periods are already fiscal
+}
+
+/**
+ * True if a header looks like a fiscal-quarter label (Q3-FY26, FY26-Q3, Q1 FY27F, …).
+ * Such data is already in fiscal periods, so the fiscal-year-end transform must be
+ * a no-op (December) to avoid double-shifting the periods.
+ */
+export function isFiscalQuarterHeader(s: string): boolean {
+  if (!s || typeof s !== 'string') return false;
+  const t = s.trim();
+  return /^Q[1-4][\s'/-]*FY[\s'/-]*\d{2,4}\s*[AFEP]?$/i.test(t) ||
+    /^FY[\s'/-]*\d{2,4}[\s'/-]*Q[1-4]\s*[AFEP]?$/i.test(t);
 }
 
 function isDate(v: unknown): boolean {
@@ -93,6 +106,25 @@ export function parseHeaderDate(s: string): Date | null {
     const y = parseInt(m[1]);
     const q = parseInt(m[2]);
     if (isValidYear(y)) return new Date(y, (q - 1) * 3, 1);
+  }
+
+  // Fiscal quarter formats: Q3-FY26, Q3 FY26, Q3FY26, Q1-FY2027, with an optional
+  // trailing Actual/Forecast/Estimate/Projected indicator (A/F/E/P), e.g. "Q3-FY26A".
+  // FY-labelled data is already in fiscal periods, so map to the quarter-END month
+  // (Mar/Jun/Sep/Dec) — downstream quarter-end / fiscal-year-end checks rely on that.
+  m = t.match(/^Q([1-4])[\s'/-]*FY[\s'/-]*(\d{2,4})\s*[AFEP]?$/i);
+  if (m) {
+    const q = parseInt(m[1]);
+    const y = normalizeYear(parseInt(m[2]));
+    if (isValidYear(y)) return new Date(y, q * 3 - 1, 1);
+  }
+
+  // Fiscal quarter reversed: FY26-Q3, FY26 Q3, FY2026Q3, FY26Q3F
+  m = t.match(/^FY[\s'/-]*(\d{2,4})[\s'/-]*Q([1-4])\s*[AFEP]?$/i);
+  if (m) {
+    const y = normalizeYear(parseInt(m[1]));
+    const q = parseInt(m[2]);
+    if (isValidYear(y)) return new Date(y, q * 3 - 1, 1);
   }
 
   // Month-year: Jan-23, Jan 2023, January 2023, Jan-2023, Mar'23
@@ -591,6 +623,9 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
   dateCols.sort((a, b) => a.date.getTime() - b.date.getTime());
   const dateColumnLetters = dateCols.map(d => d.letter);
 
+  // Fiscal-labeled if any recognized period header uses FY notation
+  const fiscalLabeled = dateCols.some(d => isFiscalQuarterHeader(d.header));
+
   // Detect frequency from date headers
   const detectedFrequency = detectFrequency(dateCols.map(d => d.date));
 
@@ -708,5 +743,6 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
     detected_frequency: detectedFrequency,
     header_row: dateHeaderRow !== headerRowNum ? dateHeaderRow : headerRowNum,
     date_header_row: dateHeaderRow !== headerRowNum ? dateHeaderRow : undefined,
+    fiscal_labeled: fiscalLabeled,
   };
 }

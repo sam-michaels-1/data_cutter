@@ -4,9 +4,10 @@ interface Props {
   onFileSelect: (file: File) => void;
   isLoading: boolean;
   filename: string | null;
+  onReset?: () => void;
 }
 
-export default function FileUpload({ onFileSelect, isLoading, filename }: Props) {
+export default function FileUpload({ onFileSelect, isLoading, filename, onReset }: Props) {
   const [dragOver, setDragOver] = useState(false);
 
   const handleDrop = useCallback(
@@ -33,6 +34,15 @@ export default function FileUpload({ onFileSelect, isLoading, filename }: Props)
         <div className="text-green-600 text-4xl mb-2">{"\u2705"}</div>
         <p className="text-green-800 font-semibold">{filename}</p>
         <p className="text-green-600 text-sm mt-1">File uploaded successfully</p>
+        {onReset && (
+          <button
+            onClick={onReset}
+            disabled={isLoading}
+            className="mt-3 text-sm font-medium text-teal-700 hover:text-teal-900 underline underline-offset-2 disabled:opacity-50"
+          >
+            Upload a different file
+          </button>
+        )}
       </div>
     );
   }

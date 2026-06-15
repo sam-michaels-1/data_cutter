@@ -77,14 +77,15 @@ export default function GranularityStep({ state, dispatch }: Props) {
           Fiscal Year End Month
         </label>
         <select
-          value={state.fiscalYearEndMonth}
+          value={state.fiscalLabeled ? 12 : state.fiscalYearEndMonth}
+          disabled={state.fiscalLabeled}
           onChange={(e) =>
             dispatch({
               type: "SET_FISCAL_MONTH",
               month: Number(e.target.value),
             })
           }
-          className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 bg-white"
+          className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
         >
           {MONTHS.map((m, i) => (
             <option key={i + 1} value={i + 1}>
@@ -92,6 +93,13 @@ export default function GranularityStep({ state, dispatch }: Props) {
             </option>
           ))}
         </select>
+        {state.fiscalLabeled && (
+          <p className="text-xs text-gray-500 mt-1.5 max-w-md">
+            Your data uses fiscal quarter labels (e.g. <span className="font-mono">Q3-FY26</span>),
+            so periods are already fiscal — the periods in your output will match your column
+            headers. Fiscal year end is locked to keep them aligned.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -30,6 +30,7 @@ const INITIAL_STATE: WizardState = {
   dateColumns: [],
   customerNameCol: null,
   dateHeaderRow: null,
+  fiscalLabeled: false,
   headerRow: 1,
   dataFrequency: null,
   dataType: "arr",
@@ -72,6 +73,7 @@ type Action =
       detectedFrequency: DataFrequency | null;
       headerRow: number;
       dateHeaderRow?: number;
+      fiscalLabeled: boolean;
     }
   | { type: "SET_SHEET"; sheet: string }
   | { type: "SET_CONFIRMED_MAPPING"; mapping: ColumnMapping }
@@ -118,8 +120,10 @@ function reducer(state: WizardState, action: Action): WizardState {
       return { ...state, currentStep: action.step, error: null };
 
     case "UPLOAD_SUCCESS":
+      // A new file replaces everything downstream — wipe any detection/config
+      // state from a previous file so re-uploading starts clean.
       return {
-        ...state,
+        ...INITIAL_STATE,
         sessionId: action.sessionId,
         filename: action.filename,
         sheetNames: action.sheetNames,
@@ -138,6 +142,7 @@ function reducer(state: WizardState, action: Action): WizardState {
         detectedAttributes: [],
         dateColumns: [],
         customerNameCol: null,
+        fiscalLabeled: false,
         scaleFactor: 1,
         rowCount: 0,
         detectedFrequency: null,
@@ -183,6 +188,10 @@ function reducer(state: WizardState, action: Action): WizardState {
         outputGranularities: granularitiesForFrequency(freq),
         headerRow: action.headerRow,
         dateHeaderRow: action.dateHeaderRow ?? null,
+        fiscalLabeled: action.fiscalLabeled,
+        // Fiscal-labeled headers (Q3-FY26) are already in fiscal periods, so the
+        // fiscal-year-end transform must stay at December to avoid double-shifting.
+        fiscalYearEndMonth: action.fiscalLabeled ? 12 : state.fiscalYearEndMonth,
         isLoading: false,
       };
     }

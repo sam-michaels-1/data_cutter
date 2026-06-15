@@ -53,6 +53,7 @@ export default function InputFormatStep({ state, dispatch }: Props) {
                 : null,
             headerRow: res.header_row,
             dateHeaderRow: res.date_header_row,
+            fiscalLabeled: res.fiscal_labeled,
           });
         }
       } catch (err: any) {
@@ -154,6 +155,33 @@ export default function InputFormatStep({ state, dispatch }: Props) {
           </p>
         </div>
       )}
+
+      {/* Cleaned format: no period columns recognized — explain why Next is disabled */}
+      {state.inputFormat === "cleaned" &&
+        !state.isLoading &&
+        state.columns.length > 0 &&
+        state.dateColumns.length === 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-amber-800">
+              No time-period columns recognized
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              We couldn&apos;t read any of your column headers as quarters or
+              months, so there&apos;s nothing to analyze yet (that&apos;s why
+              Next is disabled). Rename your period columns to a supported format
+              and re-upload.
+            </p>
+            <p className="text-xs text-amber-700 mt-2">
+              Supported examples:{" "}
+              <span className="font-mono">Q1-FY26</span>,{" "}
+              <span className="font-mono">Q3 2026</span>,{" "}
+              <span className="font-mono">Q3-2026</span>,{" "}
+              <span className="font-mono">1Q26</span>,{" "}
+              <span className="font-mono">Jan-26</span>, or real dates like{" "}
+              <span className="font-mono">3/31/2026</span>.
+            </p>
+          </div>
+        )}
 
       {/* Cleaned format: show detected layout */}
       {state.inputFormat === "cleaned" && state.dateColumns.length > 0 && (

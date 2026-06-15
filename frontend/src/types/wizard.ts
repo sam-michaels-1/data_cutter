@@ -92,6 +92,7 @@ export interface WizardState {
   dateColumns: string[];
   customerNameCol: string | null;
   dateHeaderRow: number | null;  // row with date headers (if different from headerRow)
+  fiscalLabeled: boolean;        // date headers use fiscal labels (Q3-FY26) — fiscal year end is locked
   // Shared: which row the headers were found in
   headerRow: number;
   // Step 3: Frequency
