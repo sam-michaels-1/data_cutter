@@ -11,6 +11,7 @@ const NAV_SECTIONS = [
   {
     label: "ANALYSIS",
     items: [
+      { to: "/summary", label: "Summary", icon: TableIcon },
       { to: "/dashboard", label: "Dashboard", icon: ChartIcon },
       { to: "/histograms", label: "Histograms", icon: HistogramIcon },
       { to: "/cohort", label: "Cohort Analysis", icon: GridIcon },
@@ -107,6 +108,14 @@ export default function Sidebar({ onClose }: SidebarProps) {
 }
 
 // Inline SVG icons
+
+function TableIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6zM3.75 9.75h16.5M9.75 9.75V20.25" />
+    </svg>
+  );
+}
 
 function UploadIcon({ className }: { className?: string }) {
   return (

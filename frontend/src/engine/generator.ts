@@ -10,9 +10,10 @@ import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFr
 import { generateRetentionTab } from './retention';
 import { generateCohortTab } from './cohort';
 import { generateTopCustomersTab, TOP_N } from './top_customers';
+import { generateSummaryTab, computeSummarySections } from './summary';
 import {
   formatControlTab, formatCleanDataTab, formatRetentionTab,
-  formatCohortTab, formatTopCustomersTab, applyFormulaColoring,
+  formatCohortTab, formatTopCustomersTab, formatSummaryTab, applyFormulaColoring,
   removeGridlines, applyTabColors
 } from './formatting';
 
@@ -73,6 +74,8 @@ export async function generateDataPack(
   const granularity = config.time_granularity;
   const outputGrans = config.output_granularities;
   const cleanTabs: Record<string, CleanTabResult> = {};
+  const cleanTabDates: Record<string, Date[]> = {};
+  cleanTabDates[granularity] = uniqueDates;
 
   // --- Base clean data tab ---
   log(`Generating Clean ${capitalize(granularity)} Data...`);
@@ -94,6 +97,7 @@ export async function generateDataPack(
       wb, config, baseResult.sheetName, baseResult.layout,
       'quarterly', uniqueCustomers, quarterlyDates);
     cleanTabs['quarterly'] = qResult;
+    cleanTabDates['quarterly'] = quarterlyDates;
 
     const annualDates = computeAnnualDates(uniqueDates, config);
     log(`Generating Clean Annual Data (${annualDates.length} years)...`);
@@ -101,6 +105,7 @@ export async function generateDataPack(
       wb, config, baseResult.sheetName, baseResult.layout,
       'annual', uniqueCustomers, annualDates);
     cleanTabs['annual'] = aResult;
+    cleanTabDates['annual'] = annualDates;
 
   } else if (granularity === 'quarterly') {
     const annualDates = computeAnnualFromQuarterlyDates(uniqueDates, config);
@@ -109,6 +114,7 @@ export async function generateDataPack(
       wb, config, baseResult.sheetName, baseResult.layout,
       'annual', uniqueCustomers, annualDates);
     cleanTabs['annual'] = aResult;
+    cleanTabDates['annual'] = annualDates;
   }
 
   // --- Build filter blocks ---
@@ -189,6 +195,32 @@ export async function generateDataPack(
           s3LabelCol, s3StartValCol, s3DataStart, s3DataEnd,
           s4LabelCol, s4StartValCol, s4DataStart, s4DataEnd,
           g);
+      }
+    }
+  }
+
+  // --- Summary tabs ---
+  for (const g of ['quarterly', 'annual'] as const) {
+    if (g in cleanTabs) {
+      const { sheetName, layout, firstDataRow, lastDataRow } = cleanTabs[g];
+      const cohortHeader = `${capitalize(g)} Cohort`;
+      const summaryAttrNames = Object.keys(config.attributes);
+      const firstAttrName = summaryAttrNames.length > 0 ? summaryAttrNames[0] : null;
+      const segmentIdentifier = firstAttrName || cohortHeader;
+      const segmentValues = firstAttrName
+        ? distinctColumnValues(srcWs, config, config.attributes[firstAttrName])
+        : summaryPeriodLabels(g, cleanTabDates[g] || [], config.fiscal_year_end_month);
+
+      log(`Generating ${capitalize(g)} Summary...`);
+      const sumSheet = generateSummaryTab(
+        wb, config, sheetName, layout, firstDataRow, lastDataRow,
+        g, segmentIdentifier, segmentValues);
+
+      log(`Formatting ${sumSheet}...`);
+      const sumWs = wb.getWorksheet(sumSheet);
+      if (sumWs) {
+        const lastSegCol = 4 + Math.max(segmentValues.length, 1);
+        formatSummaryTab(sumWs, lastSegCol, computeSummarySections(layout.num_dates, layout.num_derived));
       }
     }
   }
@@ -409,6 +441,34 @@ function computeAnnualFromQuarterlyDates(quarterlyDates: Date[], config: EngineC
   return quarterlyDates.filter(d => (d.getMonth() + 1) === fyMonth);
 }
 
+/** Sorted distinct non-blank values of a raw-data column (used for summary segments). */
+function distinctColumnValues(ws: ExcelJS.Worksheet, config: EngineConfig, colLetterStr: string): string[] {
+  const colIdx = colNumFromLetter(colLetterStr);
+  const values = new Set<string>();
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber < config.raw_data_first_row) return;
+    const val = row.getCell(colIdx).value;
+    if (val == null) return;
+    const s = String(val).trim();
+    if (s) values.add(s);
+  });
+  return [...values].sort();
+}
+
+/** Period labels matching the clean tab's row-6 headers (cohort fallback for summary segments). */
+function summaryPeriodLabels(granularity: string, dates: Date[], fyMonth: number): string[] {
+  return dates.map(d => {
+    const month = d.getMonth() + 1;
+    const year = month > fyMonth ? d.getFullYear() + 1 : d.getFullYear();
+    const yy = String(year % 100).padStart(2, '0');
+    if (granularity === 'quarterly') {
+      const fq = Math.floor(((month - (fyMonth + 1) + 12) % 12) / 3) + 1;
+      return `Q${fq}'${yy}`;
+    }
+    return `FY'${yy}`;
+  });
+}
+
 function buildFilterBlocks(config: EngineConfig): FilterBlock[] {
   const attrNames = Object.keys(config.attributes);
 
@@ -461,6 +521,12 @@ function addControlChecks(wb: ExcelJS.Workbook, granularity: string, outputGrans
       checkTabs.push([`${capitalize(g)} Cohort Check`, cohName]);
     }
   }
+  for (const g of ['annual', 'quarterly'] as const) {
+    const sumName = `${capitalize(g)} Summary`;
+    if (wb.getWorksheet(sumName)) {
+      checkTabs.push([`${capitalize(g)} Summary Check`, sumName]);
+    }
+  }
 
   const R_HDR = 10;
   ws.getCell(R_HDR, 2).value = 'Check Summary';
@@ -485,7 +551,7 @@ function addControlChecks(wb: ExcelJS.Workbook, granularity: string, outputGrans
 }
 
 function reorderSheets(wb: ExcelJS.Workbook, granularity: string): void {
-  const desiredOrder = ['Control'];
+  const desiredOrder = ['Control', 'Annual Summary', 'Quarterly Summary'];
 
   if (granularity === 'monthly') {
     desiredOrder.push(
