@@ -4,7 +4,7 @@
  */
 import ExcelJS from 'exceljs';
 import type { EngineConfig, FilterBlock, CleanTabResult } from './types';
-import { getYoyOffset, normalizeExcelDate } from './utils';
+import { getYoyOffset, normalizeExcelDate, colLetter } from './utils';
 import { parseHeaderDate } from './detect';
 import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFromTable } from './clean_data';
 import { generateRetentionTab } from './retention';
@@ -74,8 +74,6 @@ export async function generateDataPack(
   const granularity = config.time_granularity;
   const outputGrans = config.output_granularities;
   const cleanTabs: Record<string, CleanTabResult> = {};
-  const cleanTabDates: Record<string, Date[]> = {};
-  cleanTabDates[granularity] = uniqueDates;
 
   // --- Base clean data tab ---
   log(`Generating Clean ${capitalize(granularity)} Data...`);
@@ -97,7 +95,6 @@ export async function generateDataPack(
       wb, config, baseResult.sheetName, baseResult.layout,
       'quarterly', uniqueCustomers, quarterlyDates);
     cleanTabs['quarterly'] = qResult;
-    cleanTabDates['quarterly'] = quarterlyDates;
 
     const annualDates = computeAnnualDates(uniqueDates, config);
     log(`Generating Clean Annual Data (${annualDates.length} years)...`);
@@ -105,7 +102,6 @@ export async function generateDataPack(
       wb, config, baseResult.sheetName, baseResult.layout,
       'annual', uniqueCustomers, annualDates);
     cleanTabs['annual'] = aResult;
-    cleanTabDates['annual'] = annualDates;
 
   } else if (granularity === 'quarterly') {
     const annualDates = computeAnnualFromQuarterlyDates(uniqueDates, config);
@@ -114,7 +110,6 @@ export async function generateDataPack(
       wb, config, baseResult.sheetName, baseResult.layout,
       'annual', uniqueCustomers, annualDates);
     cleanTabs['annual'] = aResult;
-    cleanTabDates['annual'] = annualDates;
   }
 
   // --- Build filter blocks ---
@@ -207,9 +202,11 @@ export async function generateDataPack(
       const summaryAttrNames = Object.keys(config.attributes);
       const firstAttrName = summaryAttrNames.length > 0 ? summaryAttrNames[0] : null;
       const segmentIdentifier = firstAttrName || cohortHeader;
-      const segmentValues = firstAttrName
+      const segmentValues: (string | { formula: string })[] = firstAttrName
         ? distinctColumnValues(srcWs, config, config.attributes[firstAttrName])
-        : summaryPeriodLabels(g, cleanTabDates[g] || [], config.fiscal_year_end_month);
+        : Array.from({ length: layout.num_dates }, (_, i) => ({
+            formula: `'${sheetName}'!${colLetter(layout.arr_start + i)}$6`
+          }));
 
       log(`Generating ${capitalize(g)} Summary...`);
       const sumSheet = generateSummaryTab(
@@ -453,20 +450,6 @@ function distinctColumnValues(ws: ExcelJS.Worksheet, config: EngineConfig, colLe
     if (s) values.add(s);
   });
   return [...values].sort();
-}
-
-/** Period labels matching the clean tab's row-6 headers (cohort fallback for summary segments). */
-function summaryPeriodLabels(granularity: string, dates: Date[], fyMonth: number): string[] {
-  return dates.map(d => {
-    const month = d.getMonth() + 1;
-    const year = month > fyMonth ? d.getFullYear() + 1 : d.getFullYear();
-    const yy = String(year % 100).padStart(2, '0');
-    if (granularity === 'quarterly') {
-      const fq = Math.floor(((month - (fyMonth + 1) + 12) % 12) / 3) + 1;
-      return `Q${fq}'${yy}`;
-    }
-    return `FY'${yy}`;
-  });
 }
 
 function buildFilterBlocks(config: EngineConfig): FilterBlock[] {

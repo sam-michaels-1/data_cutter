@@ -36,7 +36,7 @@ export function generateSummaryTab(
   wb: Workbook, config: EngineConfig,
   cleanSheetName: string, cleanLayout: CleanLayout,
   firstDataRow: number, lastDataRow: number,
-  granularity: string, segmentIdentifier: string, segmentValues: string[]
+  granularity: string, segmentIdentifier: string, segmentValues: (string | { formula: string })[]
 ): string {
   const gran = granularity.charAt(0).toUpperCase() + granularity.slice(1);
   const sheetName = `${gran} Summary`;

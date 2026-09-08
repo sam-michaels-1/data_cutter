@@ -626,11 +626,17 @@ export function formatSummaryTab(
     setAlign(ws, 8, c, 'center');
     ws.getCell(8, c).border = { ...ws.getCell(8, c).border, bottom: thinBorder };
   }
-  // Segment header cells are inputs (blue on light yellow)
+  // Segment header cells are inputs (blue on light yellow); formula-linked
+  // headers (cohort fallback) show the clean tab's date labels instead
   for (let c = firstSegCol; c <= lastSegCol; c++) {
     const cell = ws.getCell(8, c);
-    cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: BLUE_COLOR } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
+    const v = cell.value;
+    if (v != null && typeof v === 'object' && 'formula' in v) {
+      cell.numFmt = NF_DATE;
+    } else {
+      cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: BLUE_COLOR } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
+    }
   }
 
   // Check summary cell + check column
