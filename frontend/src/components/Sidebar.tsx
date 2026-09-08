@@ -11,8 +11,8 @@ const NAV_SECTIONS = [
   {
     label: "ANALYSIS",
     items: [
-      { to: "/summary", label: "Summary", icon: TableIcon },
       { to: "/dashboard", label: "Dashboard", icon: ChartIcon },
+      { to: "/summary", label: "Summary", icon: TableIcon },
       { to: "/histograms", label: "Histograms", icon: HistogramIcon },
       { to: "/cohort", label: "Cohort Analysis", icon: GridIcon },
       { to: "/customers", label: "Top Customers", icon: UsersIcon },
