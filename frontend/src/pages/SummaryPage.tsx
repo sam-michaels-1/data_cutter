@@ -28,15 +28,7 @@ function AxisSelector({ label, value, options, onChange }: {
   );
 }
 
-const SECTION_BG: Record<SummarySection["key"], string> = {
-  gross: "bg-gray-500",
-  net: "bg-blue-600",
-  logo: "bg-orange-500",
-  pct_of_total: "bg-slate-700",
-  dollars: "bg-slate-700",
-  customers: "bg-slate-700",
-  per_customer: "bg-slate-700",
-};
+const RETENTION_KEYS = new Set<SummarySection["key"]>(["gross", "net", "logo"]);
 
 export default function SummaryPage() {
   const { sessionId } = useSession();
@@ -125,7 +117,7 @@ export default function SummaryPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Retention Summary</h1>
+          <h1 className="text-xl font-bold text-gray-900">Summary</h1>
           <p className="hidden sm:block text-sm text-gray-500">
             Period metrics split by {effectiveIdentifier} — {metricLabel} basis
           </p>
@@ -156,64 +148,54 @@ export default function SummaryPage() {
       </div>
 
       {/* Summary table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
-        <table className="text-xs border-collapse min-w-full">
-          <thead>
-            <tr className="border-b border-gray-300 bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 min-w-[10rem] px-2 py-1.5 text-left font-semibold text-gray-700 border-r border-gray-200">
-                {effectiveIdentifier}
-              </th>
-              <th className="sticky left-[10rem] z-10 bg-gray-50 min-w-[4.5rem] px-2 py-1.5 text-left font-semibold text-gray-700 border-r border-gray-200">
-                Period
-              </th>
-              <th className="px-2 py-1.5 text-right font-semibold text-gray-700 whitespace-nowrap border-l border-gray-200">
-                All
-              </th>
-              {segmentColumns.map(v => (
-                <th key={v} className="px-2 py-1.5 text-right font-semibold text-gray-700 whitespace-nowrap">
-                  {v}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sections.map(section => (
-              section.rows.length === 0 ? null : (
-                section.rows.map((row, ri) => (
-                  <tr key={`${section.key}-${row.period}`} className="border-b border-gray-100">
-                    {ri === 0 && (
-                      <td
-                        rowSpan={section.rows.length}
-                        className={`sticky left-0 z-10 px-2 py-1.5 font-semibold text-white align-top ${SECTION_BG[section.key]} border-r border-gray-200`}
-                      >
-                        {section.label}
-                      </td>
-                    )}
-                    <td className="sticky left-[10rem] z-10 bg-white px-2 py-1.5 text-gray-600 whitespace-nowrap border-r border-gray-200">
-                      {row.period}
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">Period</th>
+                <th className="text-right py-2 px-2 font-medium whitespace-nowrap bg-gray-50">All</th>
+                {segmentColumns.map(v => (
+                  <th key={v} className="text-right py-2 px-2 font-medium whitespace-nowrap">{v}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section, si) => (
+                section.rows.length === 0 ? null : [
+                  <tr key={`${section.key}-hdr`}>
+                    <td
+                      colSpan={columns.length + 1}
+                      className={`text-[11px] font-semibold text-gray-700 uppercase tracking-wide pb-1 ${si === 0 ? "" : "pt-3"}`}
+                    >
+                      {section.label}
                     </td>
-                    {row.values.map((v, ci) => {
-                      const isRetention = section.key === "gross" || section.key === "net" || section.key === "logo";
-                      const colors = isRetention && v != null ? retentionColor(v) : null;
-                      return (
-                        <td
-                          key={ci}
-                          className={`px-2 py-1.5 text-right whitespace-nowrap ${ci === 0 ? "border-l border-gray-200 font-medium" : "text-gray-700"}`}
-                          style={colors ? { backgroundColor: colors.bg, color: colors.text } : undefined}
-                        >
-                          {formatCell(section, v)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )
-            ))}
-          </tbody>
-        </table>
+                  </tr>,
+                  ...section.rows.map(row => (
+                    <tr key={`${section.key}-${row.period}`} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="py-1.5 pr-3 text-gray-600 font-medium whitespace-nowrap">{row.period}</td>
+                      {row.values.map((v, ci) => {
+                        const colors = RETENTION_KEYS.has(section.key) && v != null ? retentionColor(v) : null;
+                        return (
+                          <td
+                            key={ci}
+                            className={`text-right font-mono tabular-nums px-2 py-1.5 whitespace-nowrap ${ci === 0 ? "bg-gray-50 font-medium" : "text-gray-700"}`}
+                            style={colors ? { backgroundColor: colors.bg, color: colors.text } : undefined}
+                          >
+                            {formatCell(section, v)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  )),
+                ]
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <p className="text-[11px] text-gray-400">
+      <p className="text-[10px] text-gray-400">
         Gross Retention = (BoP + Churn + Downsell) / BoP; Net Retention adds Upsell; Logo Retention = (BoP customers − churned customers) / BoP customers. BoP = the prior-year period.
       </p>
     </div>

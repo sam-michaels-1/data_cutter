@@ -11,10 +11,11 @@ import { generateRetentionTab } from './retention';
 import { generateCohortTab } from './cohort';
 import { generateTopCustomersTab, TOP_N } from './top_customers';
 import { generateSummaryTab, computeSummarySections } from './summary';
+import { generateDataSummaryTab } from './data_summary';
 import {
   formatControlTab, formatCleanDataTab, formatRetentionTab,
-  formatCohortTab, formatTopCustomersTab, formatSummaryTab, applyFormulaColoring,
-  removeGridlines, applyTabColors
+  formatCohortTab, formatTopCustomersTab, formatSummaryTab, formatDataSummaryTab,
+  applyFormulaColoring, removeGridlines, applyTabColors
 } from './formatting';
 
 function colNumFromLetter(letter: string): number {
@@ -112,9 +113,33 @@ export async function generateDataPack(
     cleanTabs['annual'] = aResult;
   }
 
+  const attrNames = Object.keys(config.attributes);
+
+  // --- Data Summary tab ---
+  let dataSummaryCells: Record<string, { col: string; firstRow: number; lastRow: number }> = {};
+  if (attrNames.length > 0 && granularity in cleanTabs) {
+    const base = cleanTabs[granularity];
+    const attrValueCounts: Record<string, number> = {};
+    for (const name of attrNames) {
+      attrValueCounts[name] = distinctColumnValues(srcWs, config, config.attributes[name]).length;
+    }
+    log('Generating Data Summary...');
+    const ds = generateDataSummaryTab(
+      wb, config, base.sheetName, base.layout, base.firstDataRow, base.lastDataRow,
+      attrValueCounts);
+    dataSummaryCells = ds.valueCells;
+    const dsWs = wb.getWorksheet(ds.sheetName);
+    if (dsWs) {
+      formatDataSummaryTab(dsWs, attrNames.map((name, k) => ({
+        col: 2 + k * 4,
+        numRows: attrValueCounts[name] + 10,
+      })));
+    }
+  }
+
   // --- Build filter blocks ---
   const filterBlocks = buildFilterBlocks(config);
-  const numAttrs = Object.keys(config.attributes).length;
+  const numAttrs = attrNames.length;
 
   // --- Retention tabs ---
   for (const g of getAvailableGranularities(granularity, outputGrans)) {
@@ -199,11 +224,15 @@ export async function generateDataPack(
     if (g in cleanTabs) {
       const { sheetName, layout, firstDataRow, lastDataRow } = cleanTabs[g];
       const cohortHeader = `${capitalize(g)} Cohort`;
-      const summaryAttrNames = Object.keys(config.attributes);
-      const firstAttrName = summaryAttrNames.length > 0 ? summaryAttrNames[0] : null;
+      const firstAttrName = attrNames.length > 0 ? attrNames[0] : null;
       const segmentIdentifier = firstAttrName || cohortHeader;
-      const segmentValues: (string | { formula: string })[] = firstAttrName
-        ? distinctColumnValues(srcWs, config, config.attributes[firstAttrName])
+      // Segment headers link to the Data Summary value list; the cohort
+      // fallback links to the clean tab's row-6 date headers
+      const vc = firstAttrName ? dataSummaryCells[firstAttrName] : undefined;
+      const segmentValues: { formula: string }[] = vc
+        ? Array.from({ length: vc.lastRow - vc.firstRow + 1 }, (_, i) => ({
+            formula: `'Data Summary'!$${vc.col}$${vc.firstRow + i}`
+          }))
         : Array.from({ length: layout.num_dates }, (_, i) => ({
             formula: `'${sheetName}'!${colLetter(layout.arr_start + i)}$6`
           }));
@@ -217,7 +246,7 @@ export async function generateDataPack(
       const sumWs = wb.getWorksheet(sumSheet);
       if (sumWs) {
         const lastSegCol = 4 + Math.max(segmentValues.length, 1);
-        formatSummaryTab(sumWs, lastSegCol, computeSummarySections(layout.num_dates, layout.num_derived));
+        formatSummaryTab(sumWs, lastSegCol, computeSummarySections(layout.num_dates, layout.num_derived), !firstAttrName);
       }
     }
   }
@@ -492,6 +521,9 @@ function addControlChecks(wb: ExcelJS.Workbook, granularity: string, outputGrans
   if (!ws) return [];
 
   const checkTabs: [string, string][] = [];
+  if (wb.getWorksheet('Data Summary')) {
+    checkTabs.push(['Data Summary Check', 'Data Summary']);
+  }
   for (const g of getAvailableGranularities(granularity, outputGrans)) {
     const retName = `${capitalize(g)} Retention`;
     if (wb.getWorksheet(retName)) {
@@ -534,7 +566,7 @@ function addControlChecks(wb: ExcelJS.Workbook, granularity: string, outputGrans
 }
 
 function reorderSheets(wb: ExcelJS.Workbook, granularity: string): void {
-  const desiredOrder = ['Control', 'Annual Summary', 'Quarterly Summary'];
+  const desiredOrder = ['Control', 'Data Summary', 'Annual Summary', 'Quarterly Summary'];
 
   if (granularity === 'monthly') {
     desiredOrder.push(
