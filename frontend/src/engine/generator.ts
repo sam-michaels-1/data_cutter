@@ -467,17 +467,25 @@ function computeAnnualFromQuarterlyDates(quarterlyDates: Date[], config: EngineC
   return quarterlyDates.filter(d => (d.getMonth() + 1) === fyMonth);
 }
 
-/** Sorted distinct non-blank values of a raw-data column (used for summary segments). */
+/** Sorted distinct non-blank values of a raw-data column (used for summary segments).
+ *  Preserves exact values (no trimming) and maps truly blank cells to "Unknown" so
+ *  the allocated segment columns match the clean-data attribute values Excel will see.
+ */
 function distinctColumnValues(ws: ExcelJS.Worksheet, config: EngineConfig, colLetterStr: string): string[] {
   const colIdx = colNumFromLetter(colLetterStr);
   const values = new Set<string>();
+  let hasBlank = false;
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber < config.raw_data_first_row) return;
     const val = row.getCell(colIdx).value;
-    if (val == null) return;
-    const s = String(val).trim();
-    if (s) values.add(s);
+    if (val == null || val === '') {
+      hasBlank = true;
+      return;
+    }
+    const s = String(val);
+    if (s !== '') values.add(s);
   });
+  if (hasBlank) values.add('Unknown');
   return [...values].sort();
 }
 

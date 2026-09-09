@@ -189,7 +189,7 @@ export function generateBaseCleanData(
       const rawAttrCol = attrs[attrNames[attrIdx]];
       const attrCol = layout.attr_start + attrIdx;
       ws.getCell(row, attrCol).value = {
-        formula: `_xlfn.XLOOKUP($${custIdCl}${row},'${rawSheet}'!$${rawCustCol}$${rawFirst}:$${rawCustCol}$${rawLast},'${rawSheet}'!$${rawAttrCol}$${rawFirst}:$${rawAttrCol}$${rawLast})`
+        formula: `IFERROR(IF(ISBLANK(INDEX('${rawSheet}'!$${rawAttrCol}$${rawFirst}:$${rawAttrCol}$${rawLast},MATCH($${custIdCl}${row},'${rawSheet}'!$${rawCustCol}$${rawFirst}:$${rawCustCol}$${rawLast},0))),"Unknown",_xlfn.XLOOKUP($${custIdCl}${row},'${rawSheet}'!$${rawCustCol}$${rawFirst}:$${rawCustCol}$${rawLast},'${rawSheet}'!$${rawAttrCol}$${rawFirst}:$${rawAttrCol}$${rawLast})),"Unknown")`
       };
     }
 
@@ -614,7 +614,7 @@ export function generateCleanDataFromTable(
     for (let attrIdx = 0; attrIdx < attrNames.length; attrIdx++) {
       const rawAttrCol = attrs[attrNames[attrIdx]];
       ws.getCell(row, layout.attr_start + attrIdx).value = {
-        formula: `'${srcSheet}'!${rawAttrCol}${srcRow}`
+        formula: `IFERROR(IF(ISBLANK('${srcSheet}'!${rawAttrCol}${srcRow}),"Unknown",'${srcSheet}'!${rawAttrCol}${srcRow}),"Unknown")`
       };
     }
 

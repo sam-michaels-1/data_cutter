@@ -87,7 +87,7 @@ export function generateSummaryTab(
   // --- Row 8: column headers ---
   ws.getCell(8, 2).value = 'Metric';
   ws.getCell(8, 3).value = 'Period';
-  ws.getCell(8, allCol).value = '<>';
+  ws.getCell(8, allCol).value = 'All';
   for (let i = 0; i < segmentValues.length; i++) {
     ws.getCell(8, firstSegCol + i).value = segmentValues[i];
   }
@@ -102,6 +102,12 @@ export function generateSummaryTab(
   function R(colNum: number): string {
     const cl = colLetter(colNum);
     return `'${cleanSheetName}'!$${cl}$${firstDataRow}:$${cl}$${lastDataRow}`;
+  }
+  function allSum(colNum: number): string {
+    return `SUM(${R(colNum)})`;
+  }
+  function allCount(colNum: number): string {
+    return `COUNTIF(${R(colNum)},"<>"&0)`;
   }
   function segSum(colNum: number, L: string): string {
     return `SUMIFS(${R(colNum)},${CRIT},${L}$8)`;
@@ -134,8 +140,9 @@ export function generateSummaryTab(
 
       for (let c = allCol; c <= lastSegCol; c++) {
         const L = colLetter(c);
-        const sum = (colNum: number) => segSum(colNum, L);
-        const cnt = (colNum: number) => segCount(colNum, L);
+        const isAll = c === allCol;
+        const sum = (colNum: number) => isAll ? allSum(colNum) : segSum(colNum, L);
+        const cnt = (colNum: number) => isAll ? allCount(colNum) : segCount(colNum, L);
         let formula: string | null = null;
 
         switch (section.key) {
