@@ -153,10 +153,10 @@ export default function SummaryPage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">Period</th>
-                <th className="text-right py-2 px-2 font-medium whitespace-nowrap bg-gray-50">All</th>
+                <th className="sticky top-0 z-10 text-left py-2 pr-3 font-medium whitespace-nowrap bg-white">Period</th>
+                <th className="sticky top-0 z-10 text-right py-2 px-2 font-medium whitespace-nowrap bg-gray-50">All</th>
                 {segmentColumns.map(v => (
-                  <th key={v} className="text-right py-2 px-2 font-medium whitespace-nowrap">{v}</th>
+                  <th key={v} className="sticky top-0 z-10 text-right py-2 px-2 font-medium whitespace-nowrap bg-white">{v}</th>
                 ))}
               </tr>
             </thead>
