@@ -221,7 +221,7 @@ export async function generateDataPack(
 
   // --- Summary tabs ---
   for (const g of ['quarterly', 'annual'] as const) {
-    if (g in cleanTabs) {
+    if (g in cleanTabs && outputGrans.includes(g)) {
       const { sheetName, layout, firstDataRow, lastDataRow } = cleanTabs[g];
       const cohortHeader = `${capitalize(g)} Cohort`;
       const firstAttrName = attrNames.length > 0 ? attrNames[0] : null;

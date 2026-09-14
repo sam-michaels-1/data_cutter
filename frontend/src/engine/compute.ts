@@ -52,11 +52,11 @@ export function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
     if (!(dateVal instanceof Date)) return;
 
     const arr = typeof arrVal === 'number' ? arrVal : (arrVal ? parseFloat(String(arrVal)) || 0 : 0);
-    const record: RawRecord = { date: normalizeExcelDate(dateVal as Date), customer_id: String(custVal).trim(), arr };
+    const record: RawRecord = { date: normalizeExcelDate(dateVal as Date), customer_id: String(custVal), arr };
 
     for (const [name, colIdx] of Object.entries(attrCols)) {
       const val = row.getCell(colIdx).value;
-      record[name] = val != null ? String(val).trim() : '';
+      record[name] = val != null && val !== '' ? String(val) : '';
     }
 
     rows.push(record);
@@ -107,7 +107,7 @@ export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[]
     if (rowNumber < config.raw_data_first_row) return;
     const custVal = row.getCell(custIdx).value;
     if (custVal == null) return;
-    const customerId = String(custVal).trim();
+    const customerId = String(custVal);
 
     for (const { colNum, date } of dateColInfo) {
       const arrVal = row.getCell(colNum).value;
@@ -116,7 +116,7 @@ export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[]
       const record: RawRecord = { date, customer_id: customerId, arr };
       for (const [name, colIdx] of Object.entries(attrCols)) {
         const val = row.getCell(colIdx).value;
-        record[name] = val != null ? String(val).trim() : '';
+        record[name] = val != null && val !== '' ? String(val) : '';
       }
       rows.push(record);
     }
