@@ -104,7 +104,6 @@ export function computeSummaryData(
 
   const derived = computeDerived(pivot, periods, yoyOffset);
   const sf = scaleFactor;
-  const round2 = (v: number) => Math.round(v * 100) / 100;
 
   // Segment identifier and column groups
   const identifiers = ['Cohort', ...attrNames];
@@ -158,7 +157,7 @@ export function computeSummaryData(
         e += v;
         if (v !== 0) c++;
       }
-      eopCol.push(round2(e / sf));
+      eopCol.push(e / sf);
       eopCntCol.push(c);
 
       if (i >= yoyOffset) {
