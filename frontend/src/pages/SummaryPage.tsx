@@ -113,7 +113,7 @@ export default function SummaryPage() {
   }
 
   return (
-    <div className="p-3 sm:p-4 space-y-3 max-w-[1600px]">
+    <div className="p-3 sm:p-4 space-y-3 max-w-[1600px] h-full flex flex-col">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
@@ -148,8 +148,8 @@ export default function SummaryPage() {
       </div>
 
       {/* Summary table */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3">
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-gray-200 rounded-xl p-3 flex-1 min-h-0 overflow-hidden">
+        <div className="overflow-auto h-full">
           <table className="w-full text-xs">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
