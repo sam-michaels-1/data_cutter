@@ -5,9 +5,10 @@ interface Props {
   attributes: AttributeOption[];
   filters: Filters;
   onChange: (filters: Filters) => void;
+  className?: string;
 }
 
-export default function AttributeFilterBar({ attributes, filters, onChange }: Props) {
+export default function AttributeFilterBar({ attributes, filters, onChange, className }: Props) {
   if (attributes.length === 0) return null;
 
   const handleSingleChange = (attrName: string, value: string) => {
@@ -35,7 +36,7 @@ export default function AttributeFilterBar({ attributes, filters, onChange }: Pr
   const hasActiveFilter = Object.keys(filters).length > 0;
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className={`flex items-center gap-3 flex-wrap ${className ?? ""}`}>
       {attributes.map(({ name, values, multiSelect }) => {
         if (multiSelect) {
           const selected = filters[name];

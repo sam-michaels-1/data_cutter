@@ -577,6 +577,165 @@ export function formatCohortTab(
   });
 }
 
+export function formatSummaryTab(
+  ws: Worksheet, lastSegCol: number,
+  sections: import('./summary').SummarySectionLayout[],
+  headersAreDates = false
+): void {
+  const allCol = 4;         // D
+  const checkCol = lastSegCol + 1;
+  const lastRow = Math.max(...sections.map(s => s.startRow + s.numRows - 1), 8);
+
+  const sectionNumFmt: Record<string, string> = {
+    gross: NF_PCT,
+    net: NF_PCT,
+    logo: NF_PCT,
+    pct_of_total: NF_PCT,
+    dollars: NF_DOLLAR,
+    customers: NF_NUMBER,
+    per_customer: NF_DOLLAR,
+  };
+
+  // Base font
+  for (let r = 1; r <= lastRow; r++) {
+    for (let c = 1; c <= checkCol; c++) {
+      ws.getCell(r, c).font = baseFont();
+    }
+  }
+
+  // Units cell
+  formatUnitsCell(ws, 3, 1, 2);
+
+  // Segment identifier input cell (blue on light yellow, like Control inputs)
+  const idCell = ws.getCell(5, 2);
+  idCell.font = { name: 'Times New Roman', size: 10, color: { argb: BLUE_COLOR } };
+  idCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
+  idCell.alignment = { horizontal: 'center' };
+  setFont(ws, 5, 1, true);
+
+  // Row 7 banner: identifier name centered across the segment columns
+  setFont(ws, 7, allCol, true);
+  for (let c = allCol; c <= lastSegCol; c++) {
+    setAlign(ws, 7, c, 'centerContinuous');
+  }
+
+  // Row 8 headers: bold, centered, bottom border
+  const thinBorder = { style: 'thin' as const };
+  for (let c = 2; c <= checkCol; c++) {
+    setFont(ws, 8, c, true);
+    setAlign(ws, 8, c, 'center');
+    ws.getCell(8, c).border = { ...ws.getCell(8, c).border, bottom: thinBorder };
+  }
+  // Header cells with plain-string values are inputs (blue on light yellow);
+  // formula-linked headers are green via applyFormulaColoring and get NF_DATE
+  // only when the linked cells hold dates (the cohort fallback)
+  for (let c = allCol; c <= lastSegCol; c++) {
+    const cell = ws.getCell(8, c);
+    const v = cell.value;
+    if (v != null && typeof v === 'object' && 'formula' in v) {
+      if (headersAreDates) cell.numFmt = NF_DATE;
+    } else {
+      cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: BLUE_COLOR } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFCC' } };
+    }
+  }
+
+  // Check summary cell + check column
+  setNumFmt(ws, 1, 2, NF_NUMBER);
+
+  // Section bodies
+  for (const section of sections) {
+    if (section.numRows <= 0) continue;
+    const fmt = sectionNumFmt[section.key];
+    setFont(ws, section.startRow, 2, true);
+
+    for (let r = section.startRow; r < section.startRow + section.numRows; r++) {
+      for (let c = allCol; c <= lastSegCol; c++) {
+        setNumFmt(ws, r, c, fmt);
+        setAlign(ws, r, c, 'right');
+      }
+      if (section.key === 'dollars') {
+        setNumFmt(ws, r, checkCol, NF_NUMBER);
+        setAlign(ws, r, checkCol, 'right');
+      }
+    }
+
+    // 3-color scale (red → white at 1.0 → green) on the retention sections
+    if (section.key === 'gross' || section.key === 'net' || section.key === 'logo') {
+      ws.addConditionalFormatting({
+        ref: `${colLetter(allCol)}${section.startRow}:${colLetter(lastSegCol)}${section.startRow + section.numRows - 1}`,
+        rules: [{
+          type: 'colorScale',
+          priority: 1,
+          cfvo: [
+            { type: 'min' },
+            { type: 'num', value: 1.0 },
+            { type: 'max' },
+          ],
+          color: [
+            { argb: 'FFF8696B' },
+            { argb: 'FFFFFFFF' },
+            { argb: 'FF63BE7B' },
+          ],
+        }],
+      });
+    }
+  }
+}
+
+export function formatDataSummaryTab(
+  ws: Worksheet, attrBlocks: { col: number; numRows: number }[]
+): void {
+  const thinBorder = { style: 'thin' as const };
+  const maxCol = attrBlocks.length > 0 ? attrBlocks[attrBlocks.length - 1].col + 2 : 1;
+  const maxRow = Math.max(...attrBlocks.map(b => 9 + b.numRows), 6);
+
+  // Base font
+  for (let r = 1; r <= maxRow; r++) {
+    for (let c = 1; c <= maxCol; c++) {
+      ws.getCell(r, c).font = baseFont();
+    }
+  }
+
+  setFont(ws, 1, 1, true);
+  setNumFmt(ws, 1, 2, NF_NUMBER);
+
+  for (const { col, numRows } of attrBlocks) {
+    const firstRow = 7;
+    const lastRow = firstRow + numRows - 1;
+    const totalRow = lastRow + 1;
+    const checkRow = totalRow + 1;
+
+    // Attribute name + column headers
+    setFont(ws, 5, col, true);
+    for (let c = col; c <= col + 2; c++) {
+      setFont(ws, 6, c, true);
+      setAlign(ws, 6, c, 'center');
+      ws.getCell(6, c).border = { ...ws.getCell(6, c).border, bottom: thinBorder };
+    }
+
+    for (let r = firstRow; r <= lastRow; r++) {
+      setNumFmt(ws, r, col + 1, NF_NUMBER);
+      setNumFmt(ws, r, col + 2, NF_PCT_DEC);
+      setAlign(ws, r, col + 1, 'right');
+      setAlign(ws, r, col + 2, 'right');
+    }
+
+    // Total row bold with top border; check row italic
+    for (let c = col; c <= col + 2; c++) {
+      setFont(ws, totalRow, c, true);
+      ws.getCell(totalRow, c).border = { ...ws.getCell(totalRow, c).border, top: thinBorder };
+    }
+    setNumFmt(ws, totalRow, col + 1, NF_NUMBER);
+    setNumFmt(ws, totalRow, col + 2, NF_PCT);
+    setNumFmt(ws, checkRow, col + 1, NF_NUMBER);
+    const checkCell = ws.getCell(checkRow, col);
+    checkCell.font = { ...baseFont(), italic: true };
+    const checkVal = ws.getCell(checkRow, col + 1);
+    checkVal.font = { ...baseFont(), italic: true };
+  }
+}
+
 export function formatTopCustomersTab(
   ws: Worksheet, _config: import('./types').EngineConfig, _layout: import('./utils').CleanLayout,
   firstCustomerRow: number, lastCustomerRow: number,
@@ -716,6 +875,8 @@ export function removeGridlines(wb: Workbook): void {
 export function applyTabColors(wb: Workbook): void {
   const colorMap: [RegExp | string, string][] = [
     ['Control', '92D050'],
+    [/Data Summary/, 'D9D2E9'],
+    [/Summary/, 'A9D18E'],
     [/Retention/, '5B9BD5'],
     [/Cohort/, 'FFD966'],
     [/Top Customer/, 'F4B084'],

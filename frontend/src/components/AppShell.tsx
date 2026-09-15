@@ -6,7 +6,7 @@ export default function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900">
+    <div className="flex h-screen bg-gray-50 text-gray-900">
       {/* Desktop sidebar */}
       <div className="hidden md:block">
         <Sidebar />

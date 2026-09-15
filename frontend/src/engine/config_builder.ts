@@ -54,9 +54,9 @@ function getUniqueValues(wb: Workbook, sheetName: string, colLetterStr: string, 
     if (rowNumber <= headerRow) return;
     if (values.size >= maxUnique) return;
     const val = row.getCell(colIdx).value;
-    if (val == null) return;
-    const valStr = String(val).trim();
-    if (valStr) values.add(valStr);
+    if (val == null || val === '') return;
+    const valStr = String(val);
+    if (valStr !== '') values.add(valStr);
   });
 
   return [...values].sort();

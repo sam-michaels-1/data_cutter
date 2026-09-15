@@ -248,7 +248,7 @@ function chronoSort(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-function getIdentifierValue(
+export function getIdentifierValue(
   custId: string,
   identifier: string,
   cohortMap: Map<string, string>,

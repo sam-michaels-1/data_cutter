@@ -145,27 +145,28 @@ export default function CustomersPage() {
           attributes={attribute_options}
           filters={filters}
           onChange={handleFilterChange}
+          className="sticky top-0 z-30 bg-gray-50 py-2 border-b border-gray-200 !mt-0"
         />
       )}
 
       <div className="bg-white border border-gray-200 rounded-xl p-3">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[70vh]">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                <th className="text-left py-2 pr-2 w-8">#</th>
-                <th className="text-left py-2 pr-4">Customer</th>
+                <th className="sticky top-0 z-10 text-left py-2 pr-2 w-8 bg-white">#</th>
+                <th className="sticky top-0 z-10 text-left py-2 pr-4 bg-white">Customer</th>
                 {attrKeys.map((k) => (
-                  <th key={k} className="hidden sm:table-cell text-left py-2 pr-4">{k}</th>
+                  <th key={k} className="sticky top-0 z-10 hidden sm:table-cell text-left py-2 pr-4 bg-white">{k}</th>
                 ))}
-                <th className="hidden sm:table-cell text-left py-2 pr-4">Cohort</th>
-                <th className="text-right py-2 pr-4">Current ARR</th>
-                <th className="text-right py-2 pr-4">Change</th>
-                <th className="hidden sm:table-cell text-right py-2 pr-4">% of Total</th>
-                <th className="hidden sm:table-cell text-center py-2 pr-4 w-20">Trend</th>
-                <th className="text-center py-2 pr-4">Status</th>
+                <th className="sticky top-0 z-10 hidden sm:table-cell text-left py-2 pr-4 bg-white">Cohort</th>
+                <th className="sticky top-0 z-10 text-right py-2 pr-4 bg-white">Current ARR</th>
+                <th className="sticky top-0 z-10 text-right py-2 pr-4 bg-white">Change</th>
+                <th className="sticky top-0 z-10 hidden sm:table-cell text-right py-2 pr-4 bg-white">% of Total</th>
+                <th className="sticky top-0 z-10 hidden sm:table-cell text-center py-2 pr-4 w-20 bg-white">Trend</th>
+                <th className="sticky top-0 z-10 text-center py-2 pr-4 bg-white">Status</th>
                 {periods.map((p) => (
-                  <th key={p} className="hidden md:table-cell text-right py-2 pr-3 whitespace-nowrap">
+                  <th key={p} className="sticky top-0 z-10 hidden md:table-cell text-right py-2 pr-3 whitespace-nowrap bg-white">
                     {p}
                   </th>
                 ))}

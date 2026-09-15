@@ -164,7 +164,12 @@ export default function HistogramsPage() {
 
       {/* Filters */}
       {attribute_options.length > 0 && (
-        <AttributeFilterBar attributes={attribute_options} filters={filters} onChange={handleFilterChange} />
+        <AttributeFilterBar
+          attributes={attribute_options}
+          filters={filters}
+          onChange={handleFilterChange}
+          className="sticky top-0 z-30 bg-gray-50 py-2 border-b border-gray-200 !mt-0"
+        />
       )}
 
       {/* A) ARR Histogram */}
