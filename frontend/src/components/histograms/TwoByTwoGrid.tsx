@@ -25,7 +25,7 @@ export default function TwoByTwoGrid({ data, title, subtitle, formatMetric, colo
         {subtitle && <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh]">
         <table className="w-full table-fixed text-xs">
           <colgroup>
             <col style={{ width: '28%' }} />
@@ -36,11 +36,11 @@ export default function TwoByTwoGrid({ data, title, subtitle, formatMetric, colo
           </colgroup>
           <thead>
             <tr>
-              <th className="text-left py-2 pr-3 text-gray-500 font-medium" />
+              <th className="sticky top-0 left-0 z-20 text-left py-2 pr-3 text-gray-500 font-medium bg-white" />
               {data.xLabels.map(x => (
-                <th key={x} className="text-center py-2 px-2 text-gray-500 font-medium whitespace-nowrap">{x}</th>
+                <th key={x} className="sticky top-0 z-10 text-center py-2 px-2 text-gray-500 font-medium whitespace-nowrap bg-white">{x}</th>
               ))}
-              <th className="text-center py-2 px-2 text-gray-500 font-medium bg-gray-50">Total</th>
+              <th className="sticky top-0 z-10 text-center py-2 px-2 text-gray-500 font-medium bg-gray-50">Total</th>
             </tr>
           </thead>
           <tbody>

@@ -122,20 +122,20 @@ export default function CohortHeatmap({ cohort, metric, scaleFactor, granularity
   const sizeHeader = metric === "ndr" || metric === "arr" ? `Starting $${metricLabel}` : "# Customers";
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto max-h-[70vh]">
       <table className="text-xs border-collapse">
         <thead>
           <tr>
-            <th className="px-2 sm:px-3 py-2 text-left text-gray-500 font-semibold uppercase tracking-wide sticky left-0 bg-white z-10 whitespace-nowrap">
+            <th className="px-2 sm:px-3 py-2 text-left text-gray-500 font-semibold uppercase tracking-wide sticky top-0 left-0 bg-white z-20 whitespace-nowrap">
               Cohort
             </th>
-            <th className="px-1.5 sm:px-2 py-2 text-right text-gray-500 font-semibold whitespace-nowrap">
+            <th className="sticky top-0 z-10 px-1.5 sm:px-2 py-2 text-right text-gray-500 font-semibold whitespace-nowrap bg-white">
               {sizeHeader}
             </th>
             {headers.map((h) => (
               <th
                 key={h}
-                className="px-2 sm:px-3 py-2 text-center text-gray-500 font-medium whitespace-nowrap"
+                className="sticky top-0 z-10 px-2 sm:px-3 py-2 text-center text-gray-500 font-medium whitespace-nowrap bg-white"
               >
                 {h}
               </th>
