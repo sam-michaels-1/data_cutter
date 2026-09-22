@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useWizard } from "../hooks/useWizard";
 import { useSession } from "../components/SessionProvider";
+import { clearAllStorage } from "../api/storage";
 import StepIndicator from "../components/ui/StepIndicator";
 import UploadStep from "../components/steps/UploadStep";
 import InputFormatStep from "../components/steps/InputFormatStep";
@@ -45,6 +46,11 @@ export default function ImportPage() {
       setSessionId(state.downloadId);
       navigate("/dashboard");
     }
+  };
+
+  const handleNewFile = () => {
+    clearAllStorage();
+    dispatch({ type: "RESET" });
   };
 
   const renderStep = () => {
@@ -118,7 +124,7 @@ export default function ImportPage() {
           Back
         </button>
 
-        {state.currentStep < 7 && (
+        {state.currentStep < 7 ? (
           <button
             onClick={nextStep}
             disabled={!canProceed}
@@ -129,6 +135,13 @@ export default function ImportPage() {
             `}
           >
             Next
+          </button>
+        ) : (
+          <button
+            onClick={handleNewFile}
+            className="px-5 py-2 rounded-lg font-medium text-white transition bg-teal-600 hover:bg-teal-700"
+          >
+            New File
           </button>
         )}
       </div>
