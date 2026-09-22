@@ -547,8 +547,23 @@ export function computeHistogramData(
     ? cohortValues.slice(-MAX_COHORT_COLUMNS)
     : cohortValues;
   const cappedCohortSet = new Set(cappedCohortValues);
+
+  // YoY metrics need a prior period, so cohorts newer than the prior period
+  // (e.g. newest-period new logos) can't display growth or retention — the
+  // grids show only eligible cohorts. The filter exposes the union so every
+  // displayed cohort stays selectable while newer ones remain usable
+  // elsewhere (Mekko, pies, histograms).
+  const priorPeriodForGrowth = periods.length > yoyOffset
+    ? periods[periods.length - 1 - yoyOffset] : '';
+  const priorIdxForGrowth = priorPeriodForGrowth ? periods.indexOf(priorPeriodForGrowth) : -1;
+  const gridCohortValues = cohortValues
+    .filter(v => periods.indexOf(v) <= priorIdxForGrowth)
+    .slice(-MAX_COHORT_COLUMNS);
+  const gridCohortSet = new Set(gridCohortValues);
+  const cohortFilterValues = [...new Set([...gridCohortValues, ...cappedCohortValues])]
+    .sort((a, b) => periods.indexOf(a) - periods.indexOf(b));
   const allAttributeOptions = [
-    { name: 'Cohort', values: cappedCohortValues, multiSelect: true },
+    { name: 'Cohort', values: cohortFilterValues, multiSelect: true },
     ...attributeOptions,
   ];
 
@@ -701,17 +716,6 @@ export function computeHistogramData(
   });
 
   // F) Growth grid — aggregate portfolio growth matching dashboard methodology
-  const priorPeriodForGrowth = (latestDerived && periods.indexOf(latestDerived) >= yoyOffset)
-    ? periods[periods.indexOf(latestDerived) - yoyOffset] : '';
-
-  // YoY metrics need a prior period, so cohorts newer than the prior period
-  // (e.g. newest-period new logos) can't display growth or retention — drop
-  // them from the grid axes and population rather than render empty rows/cols.
-  const priorIdxForGrowth = priorPeriodForGrowth ? periods.indexOf(priorPeriodForGrowth) : -1;
-  const gridCohortValues = cohortValues
-    .filter(v => periods.indexOf(v) <= priorIdxForGrowth)
-    .slice(-MAX_COHORT_COLUMNS);
-  const gridCohortSet = new Set(gridCohortValues);
   const usesGridCohort = effectiveGridX === 'Cohort' || effectiveGridY === 'Cohort';
 
   const allRelevantCustomers = [...new Set([...activeCustomers, ...priorPeriodCustomers])];
