@@ -311,7 +311,9 @@ function reducer(state: WizardState, action: Action): WizardState {
 export function useWizard() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE, (initial) => {
     const saved = loadWizardState();
-    return saved ?? initial;
+    // In-flight flags don't survive a refresh — no async op resumes to clear
+    // them, so hydration always resets them to idle.
+    return saved ? { ...saved, isGenerating: false, isLoading: false } : initial;
   });
 
   // Persist wizard state to sessionStorage on every change
