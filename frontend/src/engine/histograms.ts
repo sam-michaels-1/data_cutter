@@ -569,11 +569,12 @@ export function computeHistogramData(
 
   // Apply cohort filter
   const cohortFilter = filters?.['Cohort'];
-  if (cohortFilter && Array.isArray(cohortFilter) && cohortFilter.length > 0 && cohortFilter.length < cohortValues.length) {
-    const selectedSet = new Set(cohortFilter);
+  const selectedCohortSet = (cohortFilter && Array.isArray(cohortFilter) && cohortFilter.length > 0 && cohortFilter.length < cohortValues.length)
+    ? new Set<string>(cohortFilter) : null;
+  if (selectedCohortSet) {
     for (const [cust] of [...pivot]) {
       const custCohort = cohortMap.get(cust);
-      if (!custCohort || !selectedSet.has(custCohort)) {
+      if (!custCohort || !selectedCohortSet.has(custCohort)) {
         pivot.delete(cust);
       }
     }
@@ -663,9 +664,13 @@ export function computeHistogramData(
   const growthValues = [...custGrowthRate.values()];
   const growthHistogram = buildPctBuckets(growthValues, 10);
 
-  // Filter customers to capped cohorts when Cohort is on the axis
+  // Filter customers to capped cohorts when Cohort is on the axis; admit any
+  // cohort explicitly selected in the filter so active selections stay visible.
+  const mekkoCohortSet = selectedCohortSet
+    ? new Set([...cappedCohortSet, ...selectedCohortSet])
+    : cappedCohortSet;
   const mekkoActiveCustomers = effectiveMekkoX === 'Cohort'
-    ? activeCustomers.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+    ? activeCustomers.filter(c => mekkoCohortSet.has(cohortMap.get(c) || ''))
     : activeCustomers;
 
   // B) Mekko ARR
