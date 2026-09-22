@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useWizard } from "../hooks/useWizard";
 import { useSession } from "../components/SessionProvider";
 import { clearAllStorage } from "../api/storage";
+import { resetSessionData } from "../api/client";
 import StepIndicator from "../components/ui/StepIndicator";
 import UploadStep from "../components/steps/UploadStep";
 import InputFormatStep from "../components/steps/InputFormatStep";
@@ -13,7 +14,7 @@ import ReviewStep from "../components/steps/ReviewStep";
 
 export default function ImportPage() {
   const { state, dispatch, nextStep, prevStep, goToStep } = useWizard();
-  const { setSessionId } = useSession();
+  const { setSessionId, setWorkbook, setConfig, setDownloadUrl } = useSession();
   const navigate = useNavigate();
 
   const canProceed = (() => {
@@ -50,6 +51,11 @@ export default function ImportPage() {
 
   const handleNewFile = () => {
     clearAllStorage();
+    setSessionId(null);
+    setWorkbook(null);
+    setConfig(null);
+    setDownloadUrl(null);
+    resetSessionData();
     dispatch({ type: "RESET" });
   };
 
@@ -139,7 +145,12 @@ export default function ImportPage() {
         ) : (
           <button
             onClick={handleNewFile}
-            className="px-5 py-2 rounded-lg font-medium text-white transition bg-teal-600 hover:bg-teal-700"
+            disabled={state.isGenerating}
+            className={`px-5 py-2 rounded-lg font-medium text-white transition ${
+              state.isGenerating
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-teal-600 hover:bg-teal-700"
+            }`}
           >
             New File
           </button>

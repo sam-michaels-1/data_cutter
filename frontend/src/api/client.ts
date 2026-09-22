@@ -36,6 +36,12 @@ export function setCurrentConfig(config: import("../engine/types").EngineConfig 
   currentConfig = config;
 }
 
+export function resetSessionData(): void {
+  currentWorkbook = null;
+  currentConfig = null;
+  currentDownloadBlob = null;
+}
+
 export async function uploadFile(file: File): Promise<UploadResponse> {
   const arrayBuffer = await file.arrayBuffer();
   const wb = new ExcelJS.Workbook();
