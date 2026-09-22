@@ -77,7 +77,9 @@ export default function TwoByTwoGrid({ data, title, subtitle, formatMetric, colo
                   {data.xTotals[xi] != null ? formatMetric(data.xTotals[xi]!) : '-'}
                 </td>
               ))}
-              <td className="text-center py-2 px-2" />
+              <td className="text-center py-2 px-2 font-mono font-semibold text-gray-800">
+                {data.grandTotal != null ? formatMetric(data.grandTotal) : ''}
+              </td>
             </tr>
           </tbody>
         </table>

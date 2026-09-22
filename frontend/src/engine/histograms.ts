@@ -68,6 +68,7 @@ export interface GridData {
   grid: (GridCell | null)[][];   // rows[y][x]
   xTotals: (number | null)[];
   yTotals: (number | null)[];
+  grandTotal: number | null;
 }
 
 export interface HistogramResult {
@@ -402,7 +403,12 @@ function buildWeightedGrid(
     return weightedAvg(allVals, allArrs);
   });
 
-  return { xLabels, yLabels, grid, xTotals, yTotals };
+  const grandVals: number[] = [];
+  const grandArrs: number[] = [];
+  for (const cell of cells.values()) { grandVals.push(...cell.values); grandArrs.push(...cell.arrs); }
+  const grandTotal = weightedAvg(grandVals, grandArrs);
+
+  return { xLabels, yLabels, grid, xTotals, yTotals, grandTotal };
 }
 
 /** Build grid using aggregate portfolio growth: sum(curr) / sum(prior) - 1 per cell. Matches dashboard methodology. */
@@ -478,7 +484,11 @@ function buildAggregateGrowthGrid(
     return sumPrior > 0 ? sumCurr / sumPrior - 1 : null;
   });
 
-  return { xLabels, yLabels, grid, xTotals, yTotals };
+  let grandCurr = 0, grandPrior = 0;
+  for (const cell of cells.values()) { grandCurr += cell.sumCurr; grandPrior += cell.sumPrior; }
+  const grandTotal = grandPrior > 0 ? grandCurr / grandPrior - 1 : null;
+
+  return { xLabels, yLabels, grid, xTotals, yTotals, grandTotal };
 }
 
 /* ─── Main computation ─── */
@@ -537,18 +547,34 @@ export function computeHistogramData(
     ? cohortValues.slice(-MAX_COHORT_COLUMNS)
     : cohortValues;
   const cappedCohortSet = new Set(cappedCohortValues);
+
+  // YoY metrics need a prior period, so cohorts newer than the prior period
+  // (e.g. newest-period new logos) can't display growth or retention — the
+  // grids show only eligible cohorts. The filter exposes the union so every
+  // displayed cohort stays selectable while newer ones remain usable
+  // elsewhere (Mekko, pies, histograms).
+  const priorPeriodForGrowth = periods.length > yoyOffset
+    ? periods[periods.length - 1 - yoyOffset] : '';
+  const priorIdxForGrowth = priorPeriodForGrowth ? periods.indexOf(priorPeriodForGrowth) : -1;
+  const gridCohortValues = cohortValues
+    .filter(v => periods.indexOf(v) <= priorIdxForGrowth)
+    .slice(-MAX_COHORT_COLUMNS);
+  const gridCohortSet = new Set(gridCohortValues);
+  const cohortFilterValues = [...new Set([...gridCohortValues, ...cappedCohortValues])]
+    .sort((a, b) => periods.indexOf(a) - periods.indexOf(b));
   const allAttributeOptions = [
-    { name: 'Cohort', values: cappedCohortValues, multiSelect: true },
+    { name: 'Cohort', values: cohortFilterValues, multiSelect: true },
     ...attributeOptions,
   ];
 
   // Apply cohort filter
   const cohortFilter = filters?.['Cohort'];
-  if (cohortFilter && Array.isArray(cohortFilter) && cohortFilter.length > 0 && cohortFilter.length < cohortValues.length) {
-    const selectedSet = new Set(cohortFilter);
+  const selectedCohortSet = (cohortFilter && Array.isArray(cohortFilter) && cohortFilter.length > 0 && cohortFilter.length < cohortValues.length)
+    ? new Set<string>(cohortFilter) : null;
+  if (selectedCohortSet) {
     for (const [cust] of [...pivot]) {
       const custCohort = cohortMap.get(cust);
-      if (!custCohort || !selectedSet.has(custCohort)) {
+      if (!custCohort || !selectedCohortSet.has(custCohort)) {
         pivot.delete(cust);
       }
     }
@@ -638,9 +664,13 @@ export function computeHistogramData(
   const growthValues = [...custGrowthRate.values()];
   const growthHistogram = buildPctBuckets(growthValues, 10);
 
-  // Filter customers to capped cohorts when Cohort is on the axis
+  // Filter customers to capped cohorts when Cohort is on the axis; admit any
+  // cohort explicitly selected in the filter so active selections stay visible.
+  const mekkoCohortSet = selectedCohortSet
+    ? new Set([...cappedCohortSet, ...selectedCohortSet])
+    : cappedCohortSet;
   const mekkoActiveCustomers = effectiveMekkoX === 'Cohort'
-    ? activeCustomers.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+    ? activeCustomers.filter(c => mekkoCohortSet.has(cohortMap.get(c) || ''))
     : activeCustomers;
 
   // B) Mekko ARR
@@ -691,11 +721,11 @@ export function computeHistogramData(
   });
 
   // F) Growth grid — aggregate portfolio growth matching dashboard methodology
-  const priorPeriodForGrowth = (latestDerived && periods.indexOf(latestDerived) >= yoyOffset)
-    ? periods[periods.indexOf(latestDerived) - yoyOffset] : '';
+  const usesGridCohort = effectiveGridX === 'Cohort' || effectiveGridY === 'Cohort';
+
   const allRelevantCustomers = [...new Set([...activeCustomers, ...priorPeriodCustomers])];
-  const gridRelevantCustomers = effectiveGridX === 'Cohort'
-    ? allRelevantCustomers.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+  const gridRelevantCustomers = usesGridCohort
+    ? allRelevantCustomers.filter(c => gridCohortSet.has(cohortMap.get(c) || ''))
     : allRelevantCustomers;
   const growthGrid = buildAggregateGrowthGrid(
     gridRelevantCustomers,
@@ -709,8 +739,8 @@ export function computeHistogramData(
 
   // G) Net retention grid (ARR-weighted)
   const custsWithRetention = priorPeriodCustomers.filter(c => custNetRetention.has(c));
-  const gridCustsWithRetention = effectiveGridX === 'Cohort'
-    ? custsWithRetention.filter(c => cappedCohortSet.has(cohortMap.get(c) || ''))
+  const gridCustsWithRetention = usesGridCohort
+    ? custsWithRetention.filter(c => gridCohortSet.has(cohortMap.get(c) || ''))
     : custsWithRetention;
   const netRetentionGrid = buildWeightedGrid(
     gridCustsWithRetention,
