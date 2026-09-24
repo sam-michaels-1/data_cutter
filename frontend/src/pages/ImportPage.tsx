@@ -118,6 +118,21 @@ export default function ImportPage() {
       </div>
 
       <div className="flex justify-between mt-6">
+        {state.currentStep === 7 && (
+          <button
+            onClick={handleNewFile}
+            disabled={state.isGenerating}
+            title="Clear this file and upload a new one"
+            className={`px-5 py-2 rounded-lg font-medium text-white transition ${
+              state.isGenerating
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-orange-500 hover:bg-orange-600"
+            }`}
+          >
+            &#8635; Start Over
+          </button>
+        )}
+
         <button
           onClick={prevStep}
           disabled={state.currentStep === 1}
@@ -130,7 +145,7 @@ export default function ImportPage() {
           Back
         </button>
 
-        {state.currentStep < 7 ? (
+        {state.currentStep < 7 && (
           <button
             onClick={nextStep}
             disabled={!canProceed}
@@ -141,18 +156,6 @@ export default function ImportPage() {
             `}
           >
             Next
-          </button>
-        ) : (
-          <button
-            onClick={handleNewFile}
-            disabled={state.isGenerating}
-            className={`px-5 py-2 rounded-lg font-medium text-white transition ${
-              state.isGenerating
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-teal-600 hover:bg-teal-700"
-            }`}
-          >
-            New File
           </button>
         )}
       </div>
