@@ -862,7 +862,10 @@ export function formatTopCustomersTab(
   // Row 5: Section headers bold, centered across each section, underlined
   for (const [sc, ec] of [[s1Start, s1End], [s2Start, s2End], [s3Start, s3End]] as [number, number][]) {
     setFont(ws, 5, sc, true);
-    centerAcrossUnderline(ws, 5, sc, ec);
+    // A section can be empty (a one-period sheet has no YoY columns);
+    // then the underline goes on the heading cell itself.
+    if (ec >= sc) centerAcrossUnderline(ws, 5, sc, ec);
+    else underlineSpan(ws, 5, sc, sc);
   }
 
   // Row 6: Column headers bold, centered, underlined
@@ -946,7 +949,12 @@ export function formatTopCustomersTab(
   for (let c = s2Start; c <= s2End; c++) ws.getColumn(c).width = 10;
   for (let c = s3Start; c <= s3End; c++) ws.getColumn(c).width = 10;
   ws.getColumn(s1End + 1).width = 2.5;
-  ws.getColumn(s2End + 1).width = 2.5;
+  if (s2End >= s2Start) {
+    ws.getColumn(s2End + 1).width = 2.5;
+  } else {
+    // Empty growth section: '% YoY Growth' holds its column alone
+    ws.getColumn(s2Start).width = 14;
+  }
 }
 
 /**
