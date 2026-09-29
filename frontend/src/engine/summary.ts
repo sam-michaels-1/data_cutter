@@ -103,17 +103,11 @@ export function generateSummaryTab(
     const cl = colLetter(colNum);
     return `'${cleanSheetName}'!$${cl}$${firstDataRow}:$${cl}$${lastDataRow}`;
   }
-  function allSum(colNum: number): string {
-    return `SUM(${R(colNum)})`;
+  function segSum(colNum: number, crit: string): string {
+    return `SUMIFS(${R(colNum)},${CRIT},${crit})`;
   }
-  function allCount(colNum: number): string {
-    return `COUNTIF(${R(colNum)},"<>"&0)`;
-  }
-  function segSum(colNum: number, L: string): string {
-    return `SUMIFS(${R(colNum)},${CRIT},${L}$8)`;
-  }
-  function segCount(colNum: number, L: string): string {
-    return `COUNTIFS(${R(colNum)},"<>"&0,${CRIT},${L}$8)`;
+  function segCount(colNum: number, crit: string): string {
+    return `COUNTIFS(${R(colNum)},"<>"&0,${CRIT},${crit})`;
   }
 
   const sectionLabels: Record<SummarySectionLayout['key'], string> = {
@@ -140,9 +134,11 @@ export function generateSummaryTab(
 
       for (let c = allCol; c <= lastSegCol; c++) {
         const L = colLetter(c);
-        const isAll = c === allCol;
-        const sum = (colNum: number) => isAll ? allSum(colNum) : segSum(colNum, L);
-        const cnt = (colNum: number) => isAll ? allCount(colNum) : segCount(colNum, L);
+        // The All column uses the same SUMIFS/COUNTIFS shape as the segment
+        // columns; "<>" (non-blank) on the criteria makes it a total.
+        const crit = c === allCol ? '"<>"' : `${L}$8`;
+        const sum = (colNum: number) => segSum(colNum, crit);
+        const cnt = (colNum: number) => segCount(colNum, crit);
         let formula: string | null = null;
 
         switch (section.key) {

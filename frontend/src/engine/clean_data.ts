@@ -120,7 +120,7 @@ export function generateBaseCleanData(
   }
 
   // --- Row 5: Section headers ---
-  ws.getCell(5, layout.attr_start).value = 'Customer Identifying Information';
+  ws.getCell(5, layout.cust_id).value = 'Customer Identifying Information';
   const metricLabel = dataType === 'arr' ? 'ARR' : 'Revenue';
   ws.getCell(5, layout.arr_start).value = `${granularity.charAt(0).toUpperCase() + granularity.slice(1)} ${metricLabel} by Date`;
   ws.getCell(5, layout.churn_start).value = 'Churn?';
@@ -336,7 +336,7 @@ export function generateAggregatedCleanData(
 
   // --- Row 5: Section headers ---
   const metricLabel = dataType === 'arr' ? 'ARR' : 'Revenue';
-  ws.getCell(5, layout.attr_start).value = 'Customer Identifying Information';
+  ws.getCell(5, layout.cust_id).value = 'Customer Identifying Information';
   ws.getCell(5, layout.arr_start).value = `${targetGranularity.charAt(0).toUpperCase() + targetGranularity.slice(1)} ${metricLabel} by Date`;
   ws.getCell(5, layout.churn_start).value = 'Churn?';
   ws.getCell(5, layout.downsell_start).value = 'Downsell?';
@@ -553,7 +553,7 @@ export function generateCleanDataFromTable(
   }
 
   // --- Row 5: Section headers ---
-  ws.getCell(5, layout.attr_start).value = 'Customer Identifying Information';
+  ws.getCell(5, layout.cust_id).value = 'Customer Identifying Information';
   const metricLabel = dataType === 'arr' ? 'ARR' : 'Revenue';
   ws.getCell(5, layout.arr_start).value = `${granularity.charAt(0).toUpperCase() + granularity.slice(1)} ${metricLabel} by Date`;
   ws.getCell(5, layout.churn_start).value = 'Churn?';

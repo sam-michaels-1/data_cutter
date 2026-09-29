@@ -40,6 +40,44 @@ function setAlign(ws: Worksheet, row: number, col: number, horizontal: 'left' | 
   ws.getCell(row, col).alignment = { horizontal };
 }
 
+const THIN_BORDER = { style: 'thin' as const };
+
+/** Center-across-selection across [c1, c2] with an underline spanning the selection. */
+function centerAcrossUnderline(ws: Worksheet, row: number, c1: number, c2: number): void {
+  for (let c = c1; c <= c2; c++) {
+    const cell = ws.getCell(row, c);
+    cell.alignment = { ...cell.alignment, horizontal: 'centerContinuous' };
+    cell.border = { ...cell.border, bottom: THIN_BORDER };
+  }
+}
+
+/** Thin underline (bottom border) across [c1, c2]. */
+function underlineSpan(ws: Worksheet, row: number, c1: number, c2: number): void {
+  for (let c = c1; c <= c2; c++) {
+    const cell = ws.getCell(row, c);
+    cell.border = { ...cell.border, bottom: THIN_BORDER };
+  }
+}
+
+/** Thin overline (top border) across [c1, c2] — underlines the numbers feeding a sum row. */
+function overlineSpan(ws: Worksheet, row: number, c1: number, c2: number): void {
+  for (let c = c1; c <= c2; c++) {
+    const cell = ws.getCell(row, c);
+    cell.border = { ...cell.border, top: THIN_BORDER };
+  }
+}
+
+// Ranges where formula color-coding should not repaint the font — e.g. cells
+// shaded by color-scale conditional formatting, where colored text is hard to
+// read (the summary retention %s keep black text like the cohort tabs).
+const blackTextRanges = new WeakMap<Worksheet, [number, number, number, number][]>();
+
+function markBlackTextRange(ws: Worksheet, r1: number, c1: number, r2: number, c2: number): void {
+  const ranges = blackTextRanges.get(ws) || [];
+  ranges.push([r1, c1, r2, c2]);
+  blackTextRanges.set(ws, ranges);
+}
+
 function formatUnitsCell(ws: Worksheet, row: number, labelCol: number, valueCol: number): void {
   setFont(ws, row, labelCol, true);
   const cell = ws.getCell(row, valueCol);
@@ -142,18 +180,30 @@ export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').Clea
   // Row 1: bold
   for (let c = 1; c <= maxCol; c++) setFont(ws, 1, c, true);
 
-  // Row 5: section headers bold
+  // Row 5: section headers bold, centered across each section, underlined
   for (let c = 1; c <= maxCol; c++) {
     if (ws.getCell(5, c).value) setFont(ws, 5, c, true);
   }
+  const sectionSpans: [number, number][] = [
+    [layout.cust_id, layout.rank],
+    [layout.arr_start, layout.arr_end],
+    [layout.churn_start, layout.churn_end],
+    [layout.downsell_start, layout.downsell_end],
+    [layout.upsell_start, layout.upsell_end],
+    [layout.new_biz_start, layout.new_biz_end],
+  ];
+  for (const [sc, ec] of sectionSpans) {
+    centerAcrossUnderline(ws, 5, sc, ec);
+  }
 
-  // Row 6: bold, center
+  // Row 6: bold, center, underlined
   for (let c = 1; c <= maxCol; c++) {
     if (ws.getCell(6, c).value) {
       setFont(ws, 6, c, true);
       setAlign(ws, 6, c, 'center');
     }
   }
+  underlineSpan(ws, 6, layout.cust_id, maxCol);
 
   // Date format on row 6 ARR columns
   for (let c = layout.arr_start; c <= layout.arr_end; c++) {
@@ -182,6 +232,15 @@ export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').Clea
   for (let c = layout.arr_start; c <= maxCol; c++) {
     setNumFmt(ws, 1, c, NF_NUMBER);
   }
+
+  // Column widths
+  ws.getColumn(1).width = 3;
+  ws.getColumn(layout.cust_id).width = 24;
+  for (let c = layout.attr_start; c <= layout.attr_end; c++) ws.getColumn(c).width = 14;
+  ws.getColumn(layout.cohort).width = 15;
+  ws.getColumn(layout.rank).width = 15;
+  ws.getColumn(layout.label).width = 8;
+  for (let c = layout.arr_start; c <= maxCol; c++) ws.getColumn(c).width = 11;
 
   // Freeze panes
   ws.views = [{ state: 'frozen', xSplit: layout.arr_start - 1, ySplit: firstDataRow - 1, showGridLines: false }];
@@ -232,13 +291,14 @@ export function formatRetentionTab(
     const rNlPct = start + 16;
     const rNlGrowth = start + 17;
 
-    // Title bold
+    // Title bold, centered across the block, underlined
     setFont(ws, rTitle, s1Label, true);
+    centerAcrossUnderline(ws, rTitle, s1Label, s3End);
 
-    // Section headers
-    for (const col of [s1Label, s2Label, s3Label]) {
-      setFont(ws, rSections, col, true);
-      setAlign(ws, rSections, col, 'centerContinuous');
+    // Section headers bold, centered across each section, underlined
+    for (const [lbl, sEnd] of [[s1Label, s1End], [s2Label, s2End], [s3Label, s3End]] as [number, number][]) {
+      setFont(ws, rSections, lbl, true);
+      centerAcrossUnderline(ws, rSections, lbl, sEnd);
     }
 
     // Column headers
@@ -248,6 +308,10 @@ export function formatRetentionTab(
     }
     setFont(ws, rHeader, cohortFc, true);
     setAlign(ws, rHeader, cohortFc, 'center');
+    underlineSpan(ws, rHeader, filterStart, cohortFc);
+    for (const [lbl, sEnd] of [[s1Label, s1End], [s2Label, s2End], [s3Label, s3End]] as [number, number][]) {
+      underlineSpan(ws, rHeader, lbl, sEnd);
+    }
 
     // Date headers
     for (let i = 0; i < numDerived; i++) {
@@ -362,7 +426,26 @@ export function formatRetentionTab(
         dc.font = { ...dc.font, italic: true };
       }
     }
+
+    // Overlines above the sum rows in each section
+    overlineSpan(ws, rRetained, s1Label, s1End);   // Retained = sum of BoP..Upsell
+    overlineSpan(ws, rEop, s1Label, s1End);        // EoP = sum of Retained..New Logo
+    overlineSpan(ws, rDownsell, s2Label, s2End);   // Retained Customers = sum of BoP..Churned
+    overlineSpan(ws, rRetained, s2Label, s2End);   // EoP Customers = sum of Retained..New Logo
+    overlineSpan(ws, rUpsell, s3Label, s3End);     // Retained Customers
+    overlineSpan(ws, rNewLogo, s3Label, s3End);    // EoP Customers
   }
+
+  // Column widths
+  ws.getColumn(1).width = 3;
+  for (let c = filterStart; c <= cohortFc; c++) ws.getColumn(c).width = 14;
+  ws.getColumn(cohortFc + 1).width = 2.5;
+  for (const [lbl, s, e] of [[s1Label, s1Start, s1End], [s2Label, s2Start, s2End], [s3Label, s3Start, s3End]] as [number, number, number][]) {
+    ws.getColumn(lbl).width = 26;
+    for (let c = s; c <= e; c++) ws.getColumn(c).width = 12;
+  }
+  ws.getColumn(s1End + 1).width = 2.5;
+  ws.getColumn(s2End + 1).width = 2.5;
 }
 
 export function formatCohortTab(
@@ -390,14 +473,23 @@ export function formatCohortTab(
     const rMedian = rTotal + 1;
     const rWeighted = rMedian + 1;
     const rCheck = rWeighted + 1;
+    const s1End = s1Start + numDates - 1;
+    const s2End = s2Start + numDates - 1;
 
-    // Title bold
+    // Title bold, centered across the block, underlined
     setFont(ws, blockStart, qCol, true);
+    centerAcrossUnderline(ws, blockStart, qCol, maxCol);
 
-    // Section headers
-    for (const col of [s1Start, s2Start, s3Label, s4Label]) {
-      setFont(ws, rSectionHeaders, col, true);
-      setAlign(ws, rSectionHeaders, col, 'centerContinuous');
+    // Section headers bold, centered across each section, underlined
+    const sectionHeaderSpans: [number, number][] = [
+      [s1Start, s1End],
+      [s2Start, s2End],
+      [s3Label, s3DataEnd],
+      [s4Label, s4DataEnd],
+    ];
+    for (const [sc, ec] of sectionHeaderSpans) {
+      setFont(ws, rSectionHeaders, sc, true);
+      centerAcrossUnderline(ws, rSectionHeaders, sc, ec);
     }
 
     // Column headers
@@ -502,29 +594,18 @@ export function formatCohortTab(
     }
 
     // Borders: underline under section headers and column headers, top border above Total
-    const thinBorder = { style: 'thin' as const };
-    const s1End = s1Start + numDates - 1;
-    const s2End = s2Start + numDates - 1;
-    const sectionRanges: [number, number][] = [
-      [s1Start, s1End],
-      [s2Start, s2End],
-      [s3Label, s3DataEnd],
-      [s4Label, s4DataEnd],
-    ];
-    for (const [startC, endC] of sectionRanges) {
-      // Bottom border under section headers row
-      for (let c = startC; c <= endC; c++) {
-        ws.getCell(rSectionHeaders, c).border = { ...ws.getCell(rSectionHeaders, c).border, bottom: thinBorder };
-      }
+    for (const [startC, endC] of sectionHeaderSpans) {
       // Bottom border under column headers row
       for (let c = startC; c <= endC; c++) {
-        ws.getCell(rHeaders, c).border = { ...ws.getCell(rHeaders, c).border, bottom: thinBorder };
+        ws.getCell(rHeaders, c).border = { ...ws.getCell(rHeaders, c).border, bottom: THIN_BORDER };
       }
       // Top border above Total row
       for (let c = startC; c <= endC; c++) {
-        ws.getCell(rTotal, c).border = { ...ws.getCell(rTotal, c).border, top: thinBorder };
+        ws.getCell(rTotal, c).border = { ...ws.getCell(rTotal, c).border, top: THIN_BORDER };
       }
     }
+    // Bottom border under the leading column headers (Quarter/Year/filters/Cohort)
+    underlineSpan(ws, rHeaders, qCol, cohortLabelCol);
 
     // Conditional formatting — ARR Retention: 3-color (red min, white at 1.0, green max)
     const s3TopLeft = `${colLetter(s3DataStart)}${firstCohortRow}`;
@@ -575,6 +656,23 @@ export function formatCohortTab(
       }
     });
   });
+
+  // Column widths
+  ws.getColumn(1).width = 3;
+  ws.getColumn(qCol).width = 9;
+  ws.getColumn(yCol).width = 8;
+  for (let c = filterStart; c <= cohortLabelCol; c++) ws.getColumn(c).width = 13;
+  for (let c = s1Start; c <= s1Start + numDates - 1; c++) ws.getColumn(c).width = 12;
+  for (let c = s2Start; c <= s2Start + numDates - 1; c++) ws.getColumn(c).width = 12;
+  ws.getColumn(s3Label).width = 24;
+  ws.getColumn(s3StartVal).width = 13;
+  for (let c = s3DataStart; c <= s3DataStart + numDates - 1; c++) ws.getColumn(c).width = 9;
+  ws.getColumn(s4Label).width = 24;
+  ws.getColumn(s4StartVal).width = 13;
+  for (let c = s4DataStart; c <= s4DataEnd; c++) ws.getColumn(c).width = 9;
+  for (const c of [s1Start + numDates, s2Start + numDates, s3DataStart + numDates]) {
+    ws.getColumn(c).width = 2.5;
+  }
 }
 
 export function formatSummaryTab(
@@ -613,11 +711,12 @@ export function formatSummaryTab(
   idCell.alignment = { horizontal: 'center' };
   setFont(ws, 5, 1, true);
 
-  // Row 7 banner: identifier name centered across the segment columns
+  // Row 7 banner: identifier name centered across the segment columns, underlined
   setFont(ws, 7, allCol, true);
   for (let c = allCol; c <= lastSegCol; c++) {
     setAlign(ws, 7, c, 'centerContinuous');
   }
+  underlineSpan(ws, 7, allCol, lastSegCol);
 
   // Row 8 headers: bold, centered, bottom border
   const thinBorder = { style: 'thin' as const };
@@ -660,8 +759,10 @@ export function formatSummaryTab(
       }
     }
 
-    // 3-color scale (red → white at 1.0 → green) on the retention sections
+    // 3-color scale (red → white at 1.0 → green) on the retention sections.
+    // Text stays black — like the cohort tabs — so formula color-coding skips them.
     if (section.key === 'gross' || section.key === 'net' || section.key === 'logo') {
+      markBlackTextRange(ws, section.startRow, allCol, section.startRow + section.numRows - 1, lastSegCol);
       ws.addConditionalFormatting({
         ref: `${colLetter(allCol)}${section.startRow}:${colLetter(lastSegCol)}${section.startRow + section.numRows - 1}`,
         rules: [{
@@ -745,6 +846,8 @@ export function formatTopCustomersTab(
   s1Start: number, _s1End: number, s2Start: number, _s2End: number, s3Start: number, s3End: number
 ): void {
   const maxCol = s3End;
+  const s1End = s1Start + numDates - 1;
+  const s2End = s2Start + numDates - 2;
 
   // Base font
   ws.eachRow({ includeEmpty: false }, (row) => {
@@ -756,12 +859,13 @@ export function formatTopCustomersTab(
   // Units cell
   formatUnitsCell(ws, 3, 1, rankNumCol);
 
-  // Row 5: Section headers
-  setFont(ws, 5, s1Start, true); setAlign(ws, 5, s1Start, 'centerContinuous');
-  setFont(ws, 5, s2Start, true); setAlign(ws, 5, s2Start, 'centerContinuous');
-  setFont(ws, 5, s3Start, true); setAlign(ws, 5, s3Start, 'centerContinuous');
+  // Row 5: Section headers bold, centered across each section, underlined
+  for (const [sc, ec] of [[s1Start, s1End], [s2Start, s2End], [s3Start, s3End]] as [number, number][]) {
+    setFont(ws, 5, sc, true);
+    centerAcrossUnderline(ws, 5, sc, ec);
+  }
 
-  // Row 6: Column headers
+  // Row 6: Column headers bold, centered, underlined
   for (const c of [custIdCol, ...Array.from({ length: numAttrs }, (_, i) => attrStart + i), cohortCol]) {
     setFont(ws, 6, c, true);
     setAlign(ws, 6, c, 'center');
@@ -775,6 +879,7 @@ export function formatTopCustomersTab(
   for (let i = 0; i < numDates; i++) {
     setFont(ws, 6, s3Start + i, true); setAlign(ws, 6, s3Start + i, 'center');
   }
+  underlineSpan(ws, 6, custIdCol, s3End);
 
   // Data rows
   for (let r = firstCustomerRow; r <= lastCustomerRow; r++) {
@@ -803,10 +908,26 @@ export function formatTopCustomersTab(
     for (let i = 0; i < numDates; i++) setNumFmt(ws, r, s3Start + i, NF_PCT_DEC);
   }
 
+  // Overlines: underline the customer numbers above each sum row
+  overlineSpan(ws, rTopTotal, custIdCol, s3End);   // customers above Top-N total
+  overlineSpan(ws, rTotal, custIdCol, s3End);      // Other Customers above Total
+
   // Other row
   for (let i = 0; i < numDates; i++) setNumFmt(ws, rOther, s1Start + i, NF_NUMBER);
   for (let i = 0; i < numDates - 1; i++) setNumFmt(ws, rOther, s2Start + i, NF_PCT);
   for (let i = 0; i < numDates; i++) setNumFmt(ws, rOther, s3Start + i, NF_PCT_DEC);
+  const otherCell = ws.getCell(rOther, custIdCol);
+  otherCell.alignment = { ...otherCell.alignment, indent: 1 };
+
+  // Memo section: italic, "Memo:" label also underlined
+  for (let r = rMemoStart; r <= rMemoStart + 4; r++) {
+    for (let c = 1; c <= maxCol; c++) {
+      const cell = ws.getCell(r, c);
+      if (cell.value != null) cell.font = { ...cell.font, italic: true };
+    }
+  }
+  const memoCell = ws.getCell(rMemoStart, custIdCol);
+  memoCell.font = { ...memoCell.font, underline: true };
 
   // Memo rows
   for (let tierIdx = 0; tierIdx < 4; tierIdx++) {
@@ -815,6 +936,17 @@ export function formatTopCustomersTab(
     for (let i = 0; i < numDates - 1; i++) setNumFmt(ws, r, s2Start + i, NF_PCT);
     for (let i = 0; i < numDates; i++) setNumFmt(ws, r, s3Start + i, NF_PCT_DEC);
   }
+
+  // Column widths
+  ws.getColumn(1).width = 4;
+  ws.getColumn(rankNumCol).width = 7;
+  ws.getColumn(custIdCol).width = 26;
+  for (let c = attrStart; c <= cohortCol; c++) ws.getColumn(c).width = 14;
+  for (let c = s1Start; c <= s1End; c++) ws.getColumn(c).width = 12;
+  for (let c = s2Start; c <= s2End; c++) ws.getColumn(c).width = 10;
+  for (let c = s3Start; c <= s3End; c++) ws.getColumn(c).width = 10;
+  ws.getColumn(s1End + 1).width = 2.5;
+  ws.getColumn(s2End + 1).width = 2.5;
 }
 
 /**
@@ -826,9 +958,13 @@ export function applyFormulaColoring(wb: Workbook, skipSheets?: string[]): void 
   for (const ws of wb.worksheets) {
     if (skip.has(ws.name)) continue;
 
-    ws.eachRow({ includeEmpty: false }, (row) => {
-      row.eachCell({ includeEmpty: false }, (cell) => {
+    const skipRanges = blackTextRanges.get(ws);
+
+    ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
         if (cell.value == null) return;
+        if (skipRanges?.some(([r1, c1, r2, c2]) =>
+          rowNumber >= r1 && rowNumber <= r2 && colNumber >= c1 && colNumber <= c2)) return;
 
         const oldFont = cell.font || {};
         const fname = oldFont.name || 'Times New Roman';
