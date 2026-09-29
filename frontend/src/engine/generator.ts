@@ -15,7 +15,7 @@ import { generateDataSummaryTab } from './data_summary';
 import {
   formatControlTab, formatCleanDataTab, formatRetentionTab,
   formatCohortTab, formatTopCustomersTab, formatSummaryTab, formatDataSummaryTab,
-  applyFormulaColoring, removeGridlines, applyTabColors
+  formatRawDataTab, applyFormulaColoring, removeGridlines, applyTabColors
 } from './formatting';
 
 function colNumFromLetter(letter: string): number {
@@ -70,6 +70,12 @@ export async function generateDataPack(
   // --- Copy source data ---
   log('Copying source data...');
   copyRawData(wb, srcWb, config);
+  const rawWs = wb.getWorksheet(config.raw_data_sheet);
+  if (rawWs) formatRawDataTab(rawWs, config);
+  const rawSepWs = wb.getWorksheet('Raw Data>>');
+  if (rawSepWs) {
+    rawSepWs.getCell(1, 1).font = { name: 'Times New Roman', size: 12, bold: true };
+  }
 
   // --- Determine tabs ---
   const granularity = config.time_granularity;
