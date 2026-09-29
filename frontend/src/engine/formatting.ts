@@ -234,7 +234,7 @@ export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').Clea
   }
 
   // Column widths
-  ws.getColumn(1).width = 3;
+  ws.getColumn(1).width = 7;
   ws.getColumn(layout.cust_id).width = 24;
   for (let c = layout.attr_start; c <= layout.attr_end; c++) ws.getColumn(c).width = 14;
   ws.getColumn(layout.cohort).width = 15;
@@ -437,7 +437,7 @@ export function formatRetentionTab(
   }
 
   // Column widths
-  ws.getColumn(1).width = 3;
+  ws.getColumn(1).width = 7;
   for (let c = filterStart; c <= cohortFc; c++) ws.getColumn(c).width = 14;
   ws.getColumn(cohortFc + 1).width = 2.5;
   for (const [lbl, s, e] of [[s1Label, s1Start, s1End], [s2Label, s2Start, s2End], [s3Label, s3Start, s3End]] as [number, number, number][]) {
@@ -658,7 +658,7 @@ export function formatCohortTab(
   });
 
   // Column widths
-  ws.getColumn(1).width = 3;
+  ws.getColumn(1).width = 7;
   ws.getColumn(qCol).width = 9;
   ws.getColumn(yCol).width = 8;
   for (let c = filterStart; c <= cohortLabelCol; c++) ws.getColumn(c).width = 13;
@@ -941,7 +941,7 @@ export function formatTopCustomersTab(
   }
 
   // Column widths
-  ws.getColumn(1).width = 4;
+  ws.getColumn(1).width = 7;
   ws.getColumn(rankNumCol).width = 7;
   ws.getColumn(custIdCol).width = 26;
   for (let c = attrStart; c <= cohortCol; c++) ws.getColumn(c).width = 14;
@@ -1038,5 +1038,57 @@ export function applyTabColors(wb: Workbook): void {
         break;
       }
     }
+  }
+}
+
+function colNumFromLetter(letter: string): number {
+  let result = 0;
+  for (let i = 0; i < letter.length; i++) {
+    result = result * 26 + (letter.toUpperCase().charCodeAt(i) - 64);
+  }
+  return result;
+}
+
+/**
+ * Format the copied raw data sheet (e.g. "Customer Cube") to match the
+ * rest of the pack: Times New Roman, an underlined header row, number
+ * formats on the data cells, and readable column widths.
+ */
+export function formatRawDataTab(ws: Worksheet, config: import('./types').EngineConfig): void {
+  const headerRow = config.raw_data_first_row - 1;
+  const idCol = colNumFromLetter(config.customer_id_col);
+  const attrCols = new Set(Object.values(config.attributes || {}).map(l => colNumFromLetter(l)));
+
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      cell.font = baseFont();
+      if (rowNumber === headerRow) {
+        cell.font = { ...cell.font, bold: true };
+        cell.alignment = { horizontal: 'center' };
+        cell.border = { bottom: THIN_BORDER };
+      } else if (rowNumber >= config.raw_data_first_row) {
+        const v = cell.value;
+        if (v instanceof Date) {
+          cell.numFmt = 'm/d/yyyy';
+          cell.alignment = { horizontal: 'center' };
+        } else if (typeof v === 'number') {
+          cell.numFmt = NF_NUMBER;
+          cell.alignment = { horizontal: 'right' };
+        }
+      }
+    });
+  });
+
+  // Column widths: wider for identifiers, snug for data columns
+  const usedCols = new Set<number>();
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    row.eachCell({ includeEmpty: false }, (_cell, colNumber) => usedCols.add(colNumber));
+  });
+  ws.getColumn(1).width = 7;
+  for (const cn of usedCols) {
+    if (cn === 1) continue;
+    if (cn === idCol) ws.getColumn(cn).width = 24;
+    else if (attrCols.has(cn)) ws.getColumn(cn).width = 14;
+    else ws.getColumn(cn).width = 12;
   }
 }
