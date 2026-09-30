@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
@@ -179,7 +179,12 @@ export default function CustomersPage() {
                   <tr key={c.rank} className="border-b border-gray-100/50">
                     <td className="py-2.5 pr-2 text-gray-500">{c.rank}</td>
                     <td className="py-2.5 pr-4 font-medium text-gray-800 truncate max-w-[160px]">
-                      {c.name}
+                      <Link
+                        to={`/deep-dive/${encodeURIComponent(c.name)}`}
+                        className="text-teal-600 hover:underline"
+                      >
+                        {c.name}
+                      </Link>
                     </td>
                     {attrKeys.map((k) => (
                       <td key={k} className="hidden sm:table-cell py-2.5 pr-4 text-gray-600 whitespace-nowrap">

@@ -75,3 +75,64 @@ export interface DashboardResponse {
 }
 
 export type CohortMetric = "ndr" | "arr" | "logo_retention" | "customers";
+
+export type CustomerEventType =
+  | "new"
+  | "upsell"
+  | "downsell"
+  | "churn"
+  | "reactivation"
+  | "flat"
+  | "inactive";
+
+export interface CustomerPeriodEntry {
+  period_label: string;
+  arr: number;
+  change: number | null;
+  change_pct: number | null;
+  event: CustomerEventType;
+}
+
+export interface CustomerMovement {
+  period_label: string;
+  type: Exclude<CustomerEventType, "flat" | "inactive">;
+  amount: number;
+}
+
+export interface AttributeTransition {
+  attribute: string;
+  from: string;
+  to: string;
+  date: string;
+  period_label: string;
+}
+
+export interface CustomerListEntry {
+  name: string;
+  current_arr: number;
+}
+
+export interface CustomerDetail {
+  name: string;
+  attributes: Record<string, string>;
+  cohort: string;
+  status: string;
+  current_arr: number;
+  first_arr: number;
+  first_period_label: string;
+  peak_arr: number;
+  peak_period_label: string;
+  lifetime_total: number;
+  pct_of_total: number;
+  total_change: number | null;
+  total_change_pct: number | null;
+  yoy_change_pct: number | null;
+  cagr: number | null;
+  timeline: CustomerPeriodEntry[];
+  movements: CustomerMovement[];
+  attribute_transitions: AttributeTransition[];
+  granularity: string;
+  available_granularities: string[];
+  scale_factor: number;
+  data_type: string;
+}

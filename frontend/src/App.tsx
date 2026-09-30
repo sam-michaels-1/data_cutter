@@ -7,6 +7,7 @@ import HistogramsPage from "./pages/HistogramsPage";
 import SummaryPage from "./pages/SummaryPage";
 import CohortPage from "./pages/CohortPage";
 import CustomersPage from "./pages/CustomersPage";
+import DeepDivePage from "./pages/DeepDivePage";
 import DownloadPage from "./pages/DownloadPage";
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
             <Route path="/histograms" element={<HistogramsPage />} />
             <Route path="/cohort" element={<CohortPage />} />
             <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/deep-dive" element={<DeepDivePage />} />
+            <Route path="/deep-dive/:customerName" element={<DeepDivePage />} />
             <Route path="/download" element={<DownloadPage />} />
           </Route>
         </Routes>
