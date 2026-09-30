@@ -55,13 +55,16 @@ export function computeCustomers(wb: Workbook, config: EngineConfig): CustomerLi
   const latest = periods[periods.length - 1] || '';
   const sf = config.scale_factor;
 
-  const list: CustomerListEntry[] = [];
-  for (const [cust] of pivot) {
-    list.push({
-      name: cust,
-      current_arr: Math.round((getPivotValue(pivot, cust, latest) / sf) * 100) / 100,
-    });
-  }
+  // Names come from the raw rows, not the pivot: for non-revenue data the
+  // aggregation drops rows not at a period boundary, which would hide
+  // customers whose records all fall mid-period.
+  const names = new Set<string>();
+  for (const r of rawRows) names.add(r.customer_id);
+
+  const list: CustomerListEntry[] = [...names].map((name) => ({
+    name,
+    current_arr: Math.round((getPivotValue(pivot, name, latest) / sf) * 100) / 100,
+  }));
   list.sort((a, b) => a.name.localeCompare(b.name));
   return list;
 }
@@ -75,11 +78,25 @@ export function computeCustomerDetail(
   const dataType = config.data_type || 'arr';
   const sf = config.scale_factor;
   const attrNames = Object.keys(config.attributes || {});
-  const { target, available } = resolveGranularity(config, granularity);
+  const resolved = resolveGranularity(config, granularity);
+  let target = resolved.target;
+  const available = resolved.available;
 
-  const { records } = aggregateToGranularity(rawRows, target, fyMonth, dataType);
-  const { pivot, periods } = buildArrMatrix(records);
-  if (!pivot.has(customerName) || periods.length === 0) return null;
+  let { records, periodDateMap } = aggregateToGranularity(rawRows, target, fyMonth, dataType);
+  let { pivot, periods } = buildArrMatrix(records);
+
+  // For non-revenue data, aggregation keeps only period-boundary rows, so a
+  // customer with only mid-period records is absent at coarser granularities.
+  // Fall back to the finest available granularity before giving up.
+  if (!pivot.has(customerName)) {
+    const finest = ['monthly', 'quarterly', 'annual'].find(g => available.includes(g));
+    if (!finest || finest === target) return null;
+    target = finest;
+    ({ records, periodDateMap } = aggregateToGranularity(rawRows, target, fyMonth, dataType));
+    ({ pivot, periods } = buildArrMatrix(records));
+    if (!pivot.has(customerName) || periods.length === 0) return null;
+  }
+  if (periods.length === 0) return null;
 
   const yoyOffset = getYoyOffset(target);
   const cohortMap = buildCohortMap(pivot, periods);
@@ -123,7 +140,9 @@ export function computeCustomerDetail(
   const currentRaw = custMap.get(latestLabel) || 0;
   const currentArr = Math.round((currentRaw / sf) * 100) / 100;
 
-  const firstIdx = timeline.findIndex(t => t.arr > 0);
+  // First non-zero period by raw value — a tiny ARR can round to 0 after
+  // scaling, so checking the rounded timeline would skip it.
+  const firstIdx = periods.findIndex(p => (custMap.get(p) || 0) > 0);
   const firstRaw = firstIdx >= 0 ? (custMap.get(periods[firstIdx]) || 0) : 0;
 
   let peakRaw = 0;
@@ -139,6 +158,23 @@ export function computeCustomerDetail(
   let totalRawAll = 0;
   for (const [, m] of pivot) totalRawAll += m.get(latestLabel) || 0;
 
+  // Latest non-empty attribute values (raw-format attributes can change over
+  // time, so the first row's value may be stale); cleaned data is constant.
+  let headerAttributes = attrLookup[customerName] || {};
+  if (config.input_format !== 'cleaned' && attrNames.length > 0) {
+    const sortedRows = rawRows
+      .filter(r => r.customer_id === customerName)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    headerAttributes = {};
+    for (const name of attrNames) {
+      headerAttributes[name] = '';
+      for (const row of sortedRows) {
+        const v = row[name] ? String(row[name]) : '';
+        if (v !== '') headerAttributes[name] = v;
+      }
+    }
+  }
+
   const totalChangeRaw = firstIdx >= 0 ? currentRaw - firstRaw : null;
   const totalChangePct = firstRaw > 0 ? Math.round((currentRaw / firstRaw - 1) * 10000) / 10000 : null;
 
@@ -149,11 +185,20 @@ export function computeCustomerDetail(
     if (priorRaw > 0) yoyChangePct = Math.round((currentRaw / priorRaw - 1) * 10000) / 10000;
   }
 
+  // CAGR uses real elapsed time between the first non-zero period and the
+  // latest period (periodDateMap holds each period's max date), so gaps in
+  // the calendar don't compress the span and inflate the rate.
   let cagr: number | null = null;
-  if (firstIdx >= 0) {
-    const years = (periods.length - 1 - firstIdx) / yoyOffset;
-    if (years >= 1 && firstRaw > 0 && currentRaw > 0) {
-      cagr = Math.round((Math.pow(currentRaw / firstRaw, 1 / years) - 1) * 10000) / 10000;
+  if (firstIdx >= 0 && firstRaw > 0 && currentRaw > 0) {
+    const firstDate = periodDateMap[periods[firstIdx]];
+    const lastDate = periodDateMap[latestLabel];
+    if (firstDate && lastDate) {
+      const years =
+        (new Date(lastDate + 'T00:00:00').getTime() - new Date(firstDate + 'T00:00:00').getTime()) /
+        (365.25 * 24 * 60 * 60 * 1000);
+      if (years >= 1) {
+        cagr = Math.round((Math.pow(currentRaw / firstRaw, 1 / years) - 1) * 10000) / 10000;
+      }
     }
   }
 
@@ -194,7 +239,7 @@ export function computeCustomerDetail(
 
   return {
     name: customerName,
-    attributes: attrLookup[customerName] || {},
+    attributes: headerAttributes,
     cohort: cohortMap.get(customerName) || '',
     status,
     current_arr: currentArr,
