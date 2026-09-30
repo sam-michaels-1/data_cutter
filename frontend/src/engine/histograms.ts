@@ -563,6 +563,12 @@ export function computeHistogramData(
     .filter(v => periods.indexOf(v) <= priorIdxForGrowth)
     .slice(-MAX_COHORT_COLUMNS);
   const gridCohortSet = new Set(gridCohortValues);
+  // Annualized retention only needs a prior period, so its cohort cap
+  // admits cohorts newer than the YoY-eligible set.
+  const annGridCohortValues = cohortValues
+    .filter(v => periods.indexOf(v) <= periods.length - 2)
+    .slice(-MAX_COHORT_COLUMNS);
+  const annGridCohortSet = new Set(annGridCohortValues);
   const cohortFilterValues = [...new Set([...gridCohortValues, ...cappedCohortValues])]
     .sort((a, b) => periods.indexOf(a) - periods.indexOf(b));
   const allAttributeOptions = [
@@ -796,7 +802,7 @@ export function computeHistogramData(
   // Annualized retention grids (empty at annual granularity)
   const custsWithAnnRetention = popPriorPeriodCustomers.filter(c => custAnnNetRetention.has(c));
   const gridCustsWithAnnRetention = usesGridCohort
-    ? custsWithAnnRetention.filter(c => gridCohortSet.has(cohortMap.get(c) || ''))
+    ? custsWithAnnRetention.filter(c => annGridCohortSet.has(cohortMap.get(c) || ''))
     : custsWithAnnRetention;
   const annNetRetentionGrid = buildWeightedGrid(
     gridCustsWithAnnRetention,
