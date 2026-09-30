@@ -252,10 +252,12 @@ export function formatRetentionTab(
   s1Label: number, s1Start: number, s1End: number,
   s2Label: number, s2Start: number, s2End: number,
   s3Label: number, s3Start: number, s3End: number,
-  filterStart: number, cohortFc: number
+  filterStart: number, cohortFc: number,
+  hasAnn = false
 ): void {
   const maxCol = s3End;
-  const maxRow = 5 + filterBlocks.length * 19;
+  const blockHeight = hasAnn ? 22 : 19;
+  const maxRow = 5 + filterBlocks.length * blockHeight;
 
   // Base font
   for (let r = 1; r <= maxRow; r++) {
@@ -271,7 +273,7 @@ export function formatRetentionTab(
   formatUnitsCell(ws, 3, 1, filterStart);
 
   for (let blockIdx = 0; blockIdx < filterBlocks.length; blockIdx++) {
-    const start = 5 + blockIdx * 19;
+    const start = 5 + blockIdx * blockHeight;
 
     const rTitle = start;
     const rSections = start + 1;
@@ -288,8 +290,9 @@ export function formatRetentionTab(
     const rLostRet = start + 13;
     const rPunitRet = start + 14;
     const rNetRet = start + 15;
-    const rNlPct = start + 16;
-    const rNlGrowth = start + 17;
+    const annRows = hasAnn ? [start + 16, start + 17, start + 18] : [];
+    const rNlPct = start + (hasAnn ? 19 : 16);
+    const rNlGrowth = start + (hasAnn ? 20 : 17);
 
     // Title bold, centered across the block, underlined
     setFont(ws, rTitle, s1Label, true);
@@ -345,7 +348,7 @@ export function formatRetentionTab(
       for (const r of [rBop, rRetained, rEop]) setNumFmt(ws, r, c, NF_DOLLAR);
       for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rCheck]) setNumFmt(ws, r, c, NF_NUMBER);
       setNumFmt(ws, rGrowth, c, NF_PCT_DEC);
-      for (const r of [rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) setNumFmt(ws, r, c, NF_PCT_DEC);
+      for (const r of [rLostRet, rPunitRet, rNetRet, ...annRows, rNlPct, rNlGrowth]) setNumFmt(ws, r, c, NF_PCT_DEC);
     }
 
     // Section 2 formatting
@@ -399,8 +402,8 @@ export function formatRetentionTab(
       cell.alignment = { ...cell.alignment, indent: 1 };
     }
 
-    // Italicize the 5 percentage rows across all section 1 columns
-    for (const r of [rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) {
+    // Italicize the percentage rows across all section 1 columns
+    for (const r of [rLostRet, rPunitRet, rNetRet, ...annRows, rNlPct, rNlGrowth]) {
       for (let c = 1; c <= maxCol; c++) {
         const cell = ws.getCell(r, c);
         cell.font = { ...cell.font, italic: true };
@@ -688,6 +691,8 @@ export function formatSummaryTab(
     gross: NF_PCT,
     net: NF_PCT,
     logo: NF_PCT,
+    ann_gross: NF_PCT,
+    ann_net: NF_PCT,
     pct_of_total: NF_PCT,
     dollars: NF_DOLLAR,
     customers: NF_NUMBER,
@@ -761,7 +766,7 @@ export function formatSummaryTab(
 
     // 3-color scale (red → white at 1.0 → green) on the retention sections.
     // Text stays black — like the cohort tabs — so formula color-coding skips them.
-    if (section.key === 'gross' || section.key === 'net' || section.key === 'logo') {
+    if (['gross', 'net', 'logo', 'ann_gross', 'ann_net'].includes(section.key)) {
       markBlackTextRange(ws, section.startRow, allCol, section.startRow + section.numRows - 1, lastSegCol);
       ws.addConditionalFormatting({
         ref: `${colLetter(allCol)}${section.startRow}:${colLetter(lastSegCol)}${section.startRow + section.numRows - 1}`,

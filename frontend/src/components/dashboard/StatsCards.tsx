@@ -7,12 +7,14 @@ interface Props {
   latestPeriodLabel: string;
   latestPeriodDate: string;
   metricLabel?: string;
+  granularity?: string;
 }
 
 const CARDS: {
   key: keyof StatsData;
   label: string;
   format: "currency" | "pct" | "count";
+  annualized?: boolean;
 }[] = [
   { key: "total_arr", label: "Total {metric}", format: "currency" },
   { key: "customer_count", label: "Customers", format: "count" },
@@ -20,6 +22,9 @@ const CARDS: {
   { key: "punitive_retention_pct", label: "Punitive Retention", format: "pct" },
   { key: "lost_only_retention_pct", label: "Lost-Only Retention", format: "pct" },
   { key: "net_retention_pct", label: "Net Retention", format: "pct" },
+  { key: "annualized_punitive_retention_pct", label: "Annualized Punitive Retention", format: "pct", annualized: true },
+  { key: "annualized_lost_only_retention_pct", label: "Annualized Lost-Only Retention", format: "pct", annualized: true },
+  { key: "annualized_net_retention_pct", label: "Annualized Net Retention", format: "pct", annualized: true },
 ];
 
 function formatAsOfDate(isoDate: string): string {
@@ -32,7 +37,11 @@ function formatAsOfDate(isoDate: string): string {
   }
 }
 
-export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, latestPeriodDate, metricLabel = "ARR" }: Props) {
+export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, latestPeriodDate, metricLabel = "ARR", granularity }: Props) {
+  // Annualized rates only differ from the YoY figures at monthly/quarterly
+  // granularity, so the extra cards are hidden on annual.
+  const cards = CARDS.filter(c => !c.annualized || granularity !== "annual");
+
   return (
     <div className="space-y-2">
       {latestPeriodLabel && (
@@ -44,7 +53,7 @@ export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, late
         </p>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {CARDS.map(({ key, label: rawLabel, format }) => {
+        {cards.map(({ key, label: rawLabel, format }) => {
           const label = rawLabel.replace("{metric}", metricLabel);
           const raw = stats[key];
           let display: string;

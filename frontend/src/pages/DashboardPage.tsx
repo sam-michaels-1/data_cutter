@@ -115,6 +115,7 @@ export default function DashboardPage() {
         latestPeriodLabel={overview.latest_period_label}
         latestPeriodDate={overview.latest_period_date}
         metricLabel={metricLabel}
+        granularity={granularity}
       />
 
       {/* Charts row */}

@@ -395,6 +395,9 @@ export interface DashboardResult {
       yoy_growth_pct: number | null;
       lost_only_retention_pct: number | null;
       punitive_retention_pct: number | null;
+      annualized_lost_only_retention_pct: number | null;
+      annualized_punitive_retention_pct: number | null;
+      annualized_net_retention_pct: number | null;
     };
     top_customers: {
       rank: number;
@@ -526,6 +529,9 @@ export function computeDashboard(
     yoy_growth_pct: null as number | null,
     lost_only_retention_pct: null as number | null,
     punitive_retention_pct: null as number | null,
+    annualized_lost_only_retention_pct: null as number | null,
+    annualized_punitive_retention_pct: null as number | null,
+    annualized_net_retention_pct: null as number | null,
   };
 
   if (periods.length > 0) {
@@ -566,6 +572,29 @@ export function computeDashboard(
     stats.yoy_growth_pct = bop !== 0 ? Math.round((eop / bop - 1) * 10000) / 10000 : null;
     stats.lost_only_retention_pct = bop !== 0 ? Math.round(((bop + churnTotal) / bop) * 10000) / 10000 : null;
     stats.punitive_retention_pct = bop !== 0 ? Math.round(((bop + churnTotal + downsellTotal) / bop) * 10000) / 10000 : null;
+  }
+
+  // Annualized retention: latest period-over-period movement scaled to a
+  // full year (x12 monthly, x4 quarterly), measured against the prior
+  // period's BoP. Not meaningful at annual granularity (identical to the
+  // YoY figures), so it stays null there.
+  if (yoyOffset > 1 && periods.length >= 2) {
+    const popDerived = computeDerived(pivot, periods, 1);
+    const last = periods[periods.length - 1];
+    const prev = periods[periods.length - 2];
+
+    let prevBop = 0;
+    for (const [, custMap] of pivot) prevBop += custMap.get(prev) || 0;
+
+    const pChurn = sumDerivedPeriod(popDerived.churn, last);
+    const pDown = sumDerivedPeriod(popDerived.downsell, last);
+    const pUp = sumDerivedPeriod(popDerived.upsell, last);
+
+    if (prevBop !== 0) {
+      stats.annualized_lost_only_retention_pct = Math.round(((prevBop + yoyOffset * pChurn) / prevBop) * 10000) / 10000;
+      stats.annualized_punitive_retention_pct = Math.round(((prevBop + yoyOffset * (pChurn + pDown)) / prevBop) * 10000) / 10000;
+      stats.annualized_net_retention_pct = Math.round(((prevBop + yoyOffset * (pChurn + pDown + pUp)) / prevBop) * 10000) / 10000;
+    }
   }
 
   // Top customers

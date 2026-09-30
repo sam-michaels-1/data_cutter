@@ -80,6 +80,8 @@ export interface HistogramResult {
   growthGrid: GridData;
   netRetentionGrid: GridData;
   lossRetentionGrid: GridData;
+  annNetRetentionGrid: GridData;
+  annLossRetentionGrid: GridData;
   identifiers: string[];
   available_granularities: string[];
   granularity: string;
@@ -88,6 +90,7 @@ export interface HistogramResult {
   attribute_options: { name: string; values: string[]; multiSelect?: boolean }[];
   latestPeriodLabel: string;
   priorPeriodLabel: string;
+  annPriorPeriodLabel: string;
 }
 
 /* ─── Helpers ─── */
@@ -560,6 +563,12 @@ export function computeHistogramData(
     .filter(v => periods.indexOf(v) <= priorIdxForGrowth)
     .slice(-MAX_COHORT_COLUMNS);
   const gridCohortSet = new Set(gridCohortValues);
+  // Annualized retention only needs a prior period, so its cohort cap
+  // admits cohorts newer than the YoY-eligible set.
+  const annGridCohortValues = cohortValues
+    .filter(v => periods.indexOf(v) <= periods.length - 2)
+    .slice(-MAX_COHORT_COLUMNS);
+  const annGridCohortSet = new Set(annGridCohortValues);
   const cohortFilterValues = [...new Set([...gridCohortValues, ...cappedCohortValues])]
     .sort((a, b) => periods.indexOf(a) - periods.indexOf(b));
   const allAttributeOptions = [
@@ -653,6 +662,34 @@ export function computeHistogramData(
       custNetRetention.set(cust, (prior + churn + downsell + upsell) / prior);
       // Loss-only = (prior + churn) / prior
       custLossRetention.set(cust, (prior + churn) / prior);
+    }
+  }
+
+  // Annualized retention: latest period-over-period movement scaled to a
+  // full year (x12 monthly, x4 quarterly) against the prior period's BoP.
+  // At annual granularity it equals the YoY figures, so it is skipped.
+  const custAnnNetRetention = new Map<string, number>();
+  const custAnnLossRetention = new Map<string, number>();
+  const popPriorPeriodCustomers: string[] = [];
+  const custPopPriorARR = new Map<string, number>();
+  const annPriorPeriodLabel = periods.length >= 2 ? periods[periods.length - 2] : '';
+  if (yoyOffset > 1 && annPriorPeriodLabel) {
+    const popDerived = computeDerived(pivot, periods, 1);
+    for (const [cust] of pivot) {
+      const prior = getPivotValue(pivot, cust, annPriorPeriodLabel);
+      if (prior > 0) {
+        popPriorPeriodCustomers.push(cust);
+        custPopPriorARR.set(cust, prior);
+      }
+    }
+    for (const cust of popPriorPeriodCustomers) {
+      const prior = custPopPriorARR.get(cust) || 0;
+      if (prior <= 0) continue;
+      const churn = popDerived.churn.get(cust)?.get(latestPeriod) || 0;
+      const downsell = popDerived.downsell.get(cust)?.get(latestPeriod) || 0;
+      const upsell = popDerived.upsell.get(cust)?.get(latestPeriod) || 0;
+      custAnnNetRetention.set(cust, (prior + yoyOffset * (churn + downsell + upsell)) / prior);
+      custAnnLossRetention.set(cust, (prior + yoyOffset * churn) / prior);
     }
   }
 
@@ -762,8 +799,33 @@ export function computeHistogramData(
     attrLookup
   );
 
-  // Unify columns across all three grids so they line up
-  unifyGridColumns([growthGrid, netRetentionGrid, lossRetentionGrid]);
+  // Annualized retention grids (empty at annual granularity)
+  const custsWithAnnRetention = popPriorPeriodCustomers.filter(c => custAnnNetRetention.has(c));
+  const gridCustsWithAnnRetention = usesGridCohort
+    ? custsWithAnnRetention.filter(c => annGridCohortSet.has(cohortMap.get(c) || ''))
+    : custsWithAnnRetention;
+  const annNetRetentionGrid = buildWeightedGrid(
+    gridCustsWithAnnRetention,
+    effectiveGridX,
+    effectiveGridY,
+    (cust) => custAnnNetRetention.get(cust) ?? null,
+    (cust) => (custPopPriorARR.get(cust) || 0) / sf,
+    cohortMap,
+    attrLookup
+  );
+
+  const annLossRetentionGrid = buildWeightedGrid(
+    gridCustsWithAnnRetention,
+    effectiveGridX,
+    effectiveGridY,
+    (cust) => custAnnLossRetention.get(cust) ?? null,
+    (cust) => (custPopPriorARR.get(cust) || 0) / sf,
+    cohortMap,
+    attrLookup
+  );
+
+  // Unify columns across all the grids so they line up
+  unifyGridColumns([growthGrid, netRetentionGrid, lossRetentionGrid, annNetRetentionGrid, annLossRetentionGrid]);
 
   return {
     arrHistogram,
@@ -774,6 +836,8 @@ export function computeHistogramData(
     growthGrid,
     netRetentionGrid,
     lossRetentionGrid,
+    annNetRetentionGrid,
+    annLossRetentionGrid,
     identifiers,
     available_granularities: available,
     granularity: targetGran,
@@ -782,5 +846,6 @@ export function computeHistogramData(
     attribute_options: allAttributeOptions,
     latestPeriodLabel: latestDerived || latestPeriod,
     priorPeriodLabel: priorPeriodForGrowth,
+    annPriorPeriodLabel,
   };
 }

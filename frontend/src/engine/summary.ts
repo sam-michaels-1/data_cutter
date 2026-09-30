@@ -9,7 +9,7 @@ import type { CleanLayout } from './utils';
 import { colLetter } from './utils';
 
 export interface SummarySectionLayout {
-  key: 'gross' | 'net' | 'logo' | 'pct_of_total' | 'dollars' | 'customers' | 'per_customer';
+  key: 'gross' | 'net' | 'logo' | 'ann_gross' | 'ann_net' | 'pct_of_total' | 'dollars' | 'customers' | 'per_customer';
   startRow: number;   // -1 when the section has no rows
   numRows: number;
 }
@@ -17,11 +17,20 @@ export interface SummarySectionLayout {
 /**
  * Compute the row layout for the summary tab sections.
  * Sections start at row 10 with a blank row between them.
- * Retention sections only have rows for periods with a prior-year period.
+ * Retention sections only have rows for periods with a prior-year period;
+ * annualized sections cover every period with a prior period (all but the
+ * first) and only exist at monthly/quarterly granularity.
  */
 export function computeSummarySections(numDates: number, numDerived: number): SummarySectionLayout[] {
-  const counts = [numDerived, numDerived, numDerived, numDates, numDates, numDates, numDates];
-  const keys: SummarySectionLayout['key'][] = ['gross', 'net', 'logo', 'pct_of_total', 'dollars', 'customers', 'per_customer'];
+  const yoyOffset = numDates - numDerived;
+  const hasAnn = yoyOffset > 1;
+  const annRows = Math.max(numDates - 1, 0);
+  const counts = hasAnn
+    ? [numDerived, numDerived, numDerived, annRows, annRows, numDates, numDates, numDates, numDates]
+    : [numDerived, numDerived, numDerived, numDates, numDates, numDates, numDates];
+  const keys: SummarySectionLayout['key'][] = hasAnn
+    ? ['gross', 'net', 'logo', 'ann_gross', 'ann_net', 'pct_of_total', 'dollars', 'customers', 'per_customer']
+    : ['gross', 'net', 'logo', 'pct_of_total', 'dollars', 'customers', 'per_customer'];
   let r = 10;
   return keys.map((key, i) => {
     const numRows = counts[i];
@@ -114,6 +123,8 @@ export function generateSummaryTab(
     gross: 'Gross Retention',
     net: 'Net Retention',
     logo: 'Logo Retention',
+    ann_gross: 'Annualized Gross Retention',
+    ann_net: 'Annualized Net Retention',
     pct_of_total: `% of ${metricLabel}`,
     dollars: `$ ${metricLabel}`,
     customers: 'Ending Customers',
@@ -127,8 +138,13 @@ export function generateSummaryTab(
 
     for (let rowIdx = 0; rowIdx < section.numRows; rowIdx++) {
       const r = section.startRow + rowIdx;
-      // Retention sections index into derived periods; others cover all periods
-      const periodIdx = rowIdx + (section.key === 'gross' || section.key === 'net' || section.key === 'logo' ? yoyOffset : 0);
+      // Retention sections index into derived periods; annualized sections
+      // skip only the first period; others cover all periods
+      const periodIdx = rowIdx + (
+        section.key === 'gross' || section.key === 'net' || section.key === 'logo' ? yoyOffset
+        : section.key === 'ann_gross' || section.key === 'ann_net' ? 1
+        : 0
+      );
       const arrCl = colLetter(cleanLayout.arr_start + periodIdx);
       ws.getCell(r, 3).value = { formula: `'${cleanSheetName}'!${arrCl}$6` };
 
@@ -156,6 +172,25 @@ export function generateSummaryTab(
             const priorArr = cleanLayout.arr_start + periodIdx - yoyOffset;
             const churn = cleanLayout.churn_start + rowIdx;
             formula = `IFERROR((${cnt(priorArr)}-${cnt(churn)})/${cnt(priorArr)},"n.a.")`;
+            break;
+          }
+          case 'ann_gross':
+          case 'ann_net': {
+            // Period-over-period movement scaled to a full year (x12
+            // monthly, x4 quarterly), divided by the prior period's BoP.
+            // SUMPRODUCT computes per-customer churn/downsell/upsell
+            // against the selected segment; the mask term keeps "<>"
+            // (non-blank) filter semantics.
+            const prevRng = R(cleanLayout.arr_start + periodIdx - 1);
+            const currRng = R(cleanLayout.arr_start + periodIdx);
+            const mask = `((${CRIT}=${crit})+(${crit}="<>")*(${CRIT}<>""))`;
+            const chPop = `SUMPRODUCT((${prevRng}>0)*(${currRng}=0)*(-${prevRng})*${mask})`;
+            const dnPop = `SUMPRODUCT((${prevRng}>0)*(${currRng}>0)*(${currRng}<${prevRng})*(${currRng}-${prevRng})*${mask})`;
+            const upPop = section.key === 'ann_net'
+              ? `+SUMPRODUCT((${prevRng}>0)*(${currRng}>${prevRng})*(${currRng}-${prevRng})*${mask})`
+              : '';
+            const segPrev = sum(cleanLayout.arr_start + periodIdx - 1);
+            formula = `IFERROR((${segPrev}+${yoyOffset}*(${chPop}+${dnPop}${upPop}))/${segPrev},"n.a.")`;
             break;
           }
           case 'pct_of_total': {
