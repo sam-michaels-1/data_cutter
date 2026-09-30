@@ -543,26 +543,25 @@ export function computeDashboard(
 
     let bop = 0;
     for (const [, custMap] of pivot) bop += custMap.get(priorPeriod) || 0;
-    bop /= sf;
 
-    const churnTotal = sumDerivedPeriod(derived.churn, latest) / sf;
-    const downsellTotal = sumDerivedPeriod(derived.downsell, latest) / sf;
-    const upsellTotal = sumDerivedPeriod(derived.upsell, latest) / sf;
-    const newLogoTotal = sumDerivedPeriod(derived.new_biz, latest) / sf;
+    const churnTotal = sumDerivedPeriod(derived.churn, latest);
+    const downsellTotal = sumDerivedPeriod(derived.downsell, latest);
+    const upsellTotal = sumDerivedPeriod(derived.upsell, latest);
+    const newLogoTotal = sumDerivedPeriod(derived.new_biz, latest);
     const retained = bop + churnTotal + downsellTotal + upsellTotal;
     const eop = retained + newLogoTotal;
 
     waterfall = {
       period_label: latest,
-      bop: Math.round(bop * 100) / 100,
-      new_logo: Math.round(newLogoTotal * 100) / 100,
-      upsell: Math.round(upsellTotal * 100) / 100,
-      downsell: Math.round(downsellTotal * 100) / 100,
-      churn: Math.round(churnTotal * 100) / 100,
-      eop: Math.round(eop * 100) / 100,
+      bop: Math.round(bop * 100) / 100 / sf,
+      new_logo: Math.round(newLogoTotal * 100) / 100 / sf,
+      upsell: Math.round(upsellTotal * 100) / 100 / sf,
+      downsell: Math.round(downsellTotal * 100) / 100 / sf,
+      churn: Math.round(churnTotal * 100) / 100 / sf,
+      eop: Math.round(eop * 100) / 100 / sf,
     };
 
-    stats.total_arr = Math.round(eop * 100) / 100;
+    stats.total_arr = Math.round(eop * 100) / 100 / sf;
     stats.net_retention_pct = bop !== 0 ? Math.round((retained / bop) * 10000) / 10000 : null;
     stats.yoy_growth_pct = bop !== 0 ? Math.round((eop / bop - 1) * 10000) / 10000 : null;
     stats.lost_only_retention_pct = bop !== 0 ? Math.round(((bop + churnTotal) / bop) * 10000) / 10000 : null;
