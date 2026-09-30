@@ -162,7 +162,7 @@ export default function SummaryPage() {
                 <th className="sticky top-0 z-10 text-left py-2 pr-3 font-medium whitespace-nowrap bg-white">Period</th>
                 <th className="sticky top-0 z-10 text-right py-2 px-2 font-medium whitespace-nowrap bg-gray-50">All</th>
                 {segmentColumns.map(v => (
-                  <th key={v} className="sticky top-0 z-10 text-right py-2 px-2 font-medium bg-white">{v}</th>
+                  <th key={v} className="sticky top-0 z-10 text-right py-2 px-2 font-medium break-words bg-white">{v}</th>
                 ))}
               </tr>
             </thead>
