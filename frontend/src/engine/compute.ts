@@ -269,6 +269,20 @@ export function getYoyOffset(granularity: string): number {
   return { monthly: 12, quarterly: 4, annual: 1 }[granularity] || 1;
 }
 
+/** Period label for a single date, matching the labels aggregateToGranularity produces. */
+export function periodLabelForDate(date: Date, granularity: string, fyMonth: number): string {
+  if (granularity === 'annual') {
+    const { year } = assignFiscalPeriod(date, fyMonth);
+    return `FY'${(year % 100).toString().padStart(2, '0')}`;
+  }
+  if (granularity === 'quarterly') {
+    const { year, quarter } = assignFiscalPeriod(date, fyMonth);
+    return `Q${quarter}'${(year % 100).toString().padStart(2, '0')}`;
+  }
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${monthNames[date.getMonth()]} '${(date.getFullYear() % 100).toString().padStart(2, '0')}`;
+}
+
 export function getPivotValue(pivot: Map<string, Map<string, number>>, cust: string, period: string): number {
   return pivot.get(cust)?.get(period) || 0;
 }

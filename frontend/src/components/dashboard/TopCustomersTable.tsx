@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import type { TopCustomer } from "../../types/dashboard";
 import { formatCurrency } from "../../utils/format";
@@ -52,7 +53,12 @@ export default function TopCustomersTable({ customers, scaleFactor, metricLabel 
                 >
                   <td className="py-2 pr-2 text-gray-500">{c.rank}</td>
                   <td className="py-2 pr-4 font-medium text-gray-800 truncate max-w-[160px]">
-                    {c.name}
+                    <Link
+                      to={`/deep-dive/${encodeURIComponent(c.name)}`}
+                      className="text-teal-600 hover:underline"
+                    >
+                      {c.name}
+                    </Link>
                   </td>
                   {attrKeys.map((k) => (
                     <td key={k} className="hidden sm:table-cell py-2 pr-4 text-gray-600 whitespace-nowrap">
