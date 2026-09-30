@@ -5,7 +5,7 @@
 import type { Workbook } from 'exceljs';
 import type { EngineConfig, FilterBlock } from './types';
 import type { CleanLayout } from './utils';
-import { colLetter } from './utils';
+import { colLetter, naWrap } from './utils';
 
 const BLOCK_HEIGHT = 19;
 const ANN_EXTRA_ROWS = 3;
@@ -232,7 +232,7 @@ function writeRetentionBlock(
     ws.getCell(rRetained, dc).value = { formula: `SUM(${dcl}${rBop}:${dcl}${rUpsell})` };
     ws.getCell(rNewLogo, dc).value = { formula: buildSumifs(cleanLayout.new_biz_start + i, rNewLogo) };
     ws.getCell(rEop, dc).value = { formula: `SUM(${dcl}${rRetained}:${dcl}${rNewLogo})` };
-    ws.getCell(rGrowth, dc).value = { formula: `${dcl}${rEop}/${dcl}${rBop}-1` };
+    ws.getCell(rGrowth, dc).value = { formula: naWrap(`${dcl}${rEop}/${dcl}${rBop}-1`) };
 
     // Check
     const eopCol = cleanLayout.arr_start + yoyOffset + i;
@@ -240,9 +240,9 @@ function writeRetentionBlock(
     const eopRng = `'${cleanSheet}'!${eopCl}$${cdrFirst}:${eopCl}$${cdrLast}`;
     ws.getCell(rCheck, dc).value = { formula: `${dcl}${rEop}*${unitsCell}-SUMIFS(${eopRng},${criteria(rCheck)})` };
 
-    ws.getCell(rLostRet, dc).value = { formula: `SUM(${dcl}${rBop}:${dcl}${rChurn})/${dcl}${rBop}` };
-    ws.getCell(rPunitRet, dc).value = { formula: `SUM(${dcl}${rBop}:${dcl}${rDownsell})/${dcl}${rBop}` };
-    ws.getCell(rNetRet, dc).value = { formula: `SUM(${dcl}${rBop}:${dcl}${rUpsell})/${dcl}${rBop}` };
+    ws.getCell(rLostRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rChurn})/${dcl}${rBop}`) };
+    ws.getCell(rPunitRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rDownsell})/${dcl}${rBop}`) };
+    ws.getCell(rNetRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rUpsell})/${dcl}${rBop}`) };
 
     // Annualized rows: period-over-period movement (prev vs current ARR
     // column) scaled to a full year, divided by the prior period's BoP.
@@ -259,16 +259,16 @@ function writeRetentionBlock(
       const dnPop = `SUMPRODUCT((${prevRng}>0)*(${currRng}>0)*(${currRng}<${prevRng})*(${currRng}-${prevRng})*${mask})`;
       const upPop = `SUMPRODUCT((${prevRng}>0)*(${currRng}>${prevRng})*(${currRng}-${prevRng})*${mask})`;
       const m = yoyOffset;
-      ws.getCell(rAnnLostRet, dc).value = { formula: `(${bs}+${m}*${chPop}/${unitsCell})/${bs}` };
-      ws.getCell(rAnnPunitRet, dc).value = { formula: `(${bs}+${m}*(${chPop}+${dnPop})/${unitsCell})/${bs}` };
-      ws.getCell(rAnnNetRet, dc).value = { formula: `(${bs}+${m}*(${chPop}+${dnPop}+${upPop})/${unitsCell})/${bs}` };
+      ws.getCell(rAnnLostRet, dc).value = { formula: naWrap(`(${bs}+${m}*${chPop}/${unitsCell})/${bs}`) };
+      ws.getCell(rAnnPunitRet, dc).value = { formula: naWrap(`(${bs}+${m}*(${chPop}+${dnPop})/${unitsCell})/${bs}`) };
+      ws.getCell(rAnnNetRet, dc).value = { formula: naWrap(`(${bs}+${m}*(${chPop}+${dnPop}+${upPop})/${unitsCell})/${bs}`) };
     }
 
-    ws.getCell(rNlPct, dc).value = { formula: `${dcl}${rNewLogo}/${dcl}${rBop}` };
+    ws.getCell(rNlPct, dc).value = { formula: naWrap(`${dcl}${rNewLogo}/${dcl}${rBop}`) };
 
     if (i >= yoyOffset) {
       const priorCl = colLetter(s1Start + i - yoyOffset);
-      ws.getCell(rNlGrowth, dc).value = { formula: `${dcl}${rNewLogo}/${priorCl}${rNewLogo}-1` };
+      ws.getCell(rNlGrowth, dc).value = { formula: naWrap(`${dcl}${rNewLogo}/${priorCl}${rNewLogo}-1`) };
     }
   }
 
@@ -298,15 +298,15 @@ function writeRetentionBlock(
 
     ws.getCell(rUpsell, dc).value = { formula: buildCountifsNonzero(cleanLayout.new_biz_start + i, rUpsell) };
     ws.getCell(rRetained, dc).value = { formula: `SUM(${dcl}${rDownsell}:${dcl}${rUpsell})` };
-    ws.getCell(rNewLogo, dc).value = { formula: `${dcl}${rRetained}/${dcl}${rBop}-1` };
+    ws.getCell(rNewLogo, dc).value = { formula: naWrap(`${dcl}${rRetained}/${dcl}${rBop}-1`) };
 
     const eopCol = cleanLayout.arr_start + yoyOffset + i;
     const eopCl = colLetter(eopCol);
     const eopRng = `'${cleanSheet}'!${eopCl}$${cdrFirst}:${eopCl}$${cdrLast}`;
     ws.getCell(rCheck, dc).value = { formula: `${dcl}${rRetained}-COUNTIFS(${eopRng},"<>"&0,${criteria(rCheck)})` };
 
-    ws.getCell(rLostRet, dc).value = { formula: `${dcl}${rDownsell}/${dcl}${rBop}` };
-    ws.getCell(rPunitRet, dc).value = { formula: `${dcl}${rUpsell}/${dcl}${rBop}` };
+    ws.getCell(rLostRet, dc).value = { formula: naWrap(`${dcl}${rDownsell}/${dcl}${rBop}`) };
+    ws.getCell(rPunitRet, dc).value = { formula: naWrap(`${dcl}${rUpsell}/${dcl}${rBop}`) };
   }
 
   // ===== SECTION 3: ARR / Customer =====

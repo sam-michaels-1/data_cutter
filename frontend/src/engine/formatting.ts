@@ -349,6 +349,7 @@ export function formatRetentionTab(
       for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rCheck]) setNumFmt(ws, r, c, NF_NUMBER);
       setNumFmt(ws, rGrowth, c, NF_PCT_DEC);
       for (const r of [rLostRet, rPunitRet, rNetRet, ...annRows, rNlPct, rNlGrowth]) setNumFmt(ws, r, c, NF_PCT_DEC);
+      for (let r = rBop; r <= rNlGrowth; r++) setAlign(ws, r, c, 'right');
     }
 
     // Section 2 formatting
@@ -363,6 +364,7 @@ export function formatRetentionTab(
       setNumFmt(ws, rNewLogo, c, NF_PCT);
       setNumFmt(ws, rLostRet, c, NF_PCT);
       setNumFmt(ws, rPunitRet, c, NF_PCT);
+      for (let r = rBop; r <= rNlGrowth; r++) setAlign(ws, r, c, 'right');
     }
 
     // Section 3 formatting
@@ -543,14 +545,20 @@ export function formatCohortTab(
       for (let i = 0; i < numDates; i++) {
         setNumFmt(ws, r, s1Start + i, NF_NUMBER);
         setNumFmt(ws, r, s2Start + i, NF_NUMBER);
+        setAlign(ws, r, s1Start + i, 'right');
+        setAlign(ws, r, s2Start + i, 'right');
       }
 
       setNumFmt(ws, r, s3StartVal, NF_DOLLAR);
       setNumFmt(ws, r, s4StartVal, NF_NUMBER);
+      setAlign(ws, r, s3StartVal, 'right');
+      setAlign(ws, r, s4StartVal, 'right');
 
       for (let i = 0; i < numDates; i++) {
         setNumFmt(ws, r, s3DataStart + i, NF_PCT);
         setNumFmt(ws, r, s4DataStart + i, NF_PCT);
+        setAlign(ws, r, s3DataStart + i, 'right');
+        setAlign(ws, r, s4DataStart + i, 'right');
       }
     }
 
@@ -912,8 +920,14 @@ export function formatTopCustomersTab(
       if (ws.getCell(r, c).value != null) setFont(ws, r, c, true);
     }
     for (let i = 0; i < numDates; i++) setNumFmt(ws, r, s1Start + i, NF_NUMBER);
-    for (let i = 0; i < numDates - 1; i++) setNumFmt(ws, r, s2Start + i, NF_PCT);
-    for (let i = 0; i < numDates; i++) setNumFmt(ws, r, s3Start + i, NF_PCT_DEC);
+    for (let i = 0; i < numDates - 1; i++) {
+      setNumFmt(ws, r, s2Start + i, NF_PCT);
+      setAlign(ws, r, s2Start + i, 'right');
+    }
+    for (let i = 0; i < numDates; i++) {
+      setNumFmt(ws, r, s3Start + i, NF_PCT_DEC);
+      setAlign(ws, r, s3Start + i, 'right');
+    }
   }
 
   // Overlines: underline the customer numbers above each sum row
@@ -922,8 +936,14 @@ export function formatTopCustomersTab(
 
   // Other row
   for (let i = 0; i < numDates; i++) setNumFmt(ws, rOther, s1Start + i, NF_NUMBER);
-  for (let i = 0; i < numDates - 1; i++) setNumFmt(ws, rOther, s2Start + i, NF_PCT);
-  for (let i = 0; i < numDates; i++) setNumFmt(ws, rOther, s3Start + i, NF_PCT_DEC);
+  for (let i = 0; i < numDates - 1; i++) {
+    setNumFmt(ws, rOther, s2Start + i, NF_PCT);
+    setAlign(ws, rOther, s2Start + i, 'right');
+  }
+  for (let i = 0; i < numDates; i++) {
+    setNumFmt(ws, rOther, s3Start + i, NF_PCT_DEC);
+    setAlign(ws, rOther, s3Start + i, 'right');
+  }
   const otherCell = ws.getCell(rOther, custIdCol);
   otherCell.alignment = { ...otherCell.alignment, indent: 1 };
 
@@ -941,8 +961,14 @@ export function formatTopCustomersTab(
   for (let tierIdx = 0; tierIdx < 4; tierIdx++) {
     const r = rMemoStart + 1 + tierIdx;
     for (let i = 0; i < numDates; i++) setNumFmt(ws, r, s1Start + i, NF_NUMBER);
-    for (let i = 0; i < numDates - 1; i++) setNumFmt(ws, r, s2Start + i, NF_PCT);
-    for (let i = 0; i < numDates; i++) setNumFmt(ws, r, s3Start + i, NF_PCT_DEC);
+    for (let i = 0; i < numDates - 1; i++) {
+      setNumFmt(ws, r, s2Start + i, NF_PCT);
+      setAlign(ws, r, s2Start + i, 'right');
+    }
+    for (let i = 0; i < numDates; i++) {
+      setNumFmt(ws, r, s3Start + i, NF_PCT_DEC);
+      setAlign(ws, r, s3Start + i, 'right');
+    }
   }
 
   // Column widths

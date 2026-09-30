@@ -6,7 +6,7 @@
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
 import type { CleanLayout } from './utils';
-import { colLetter } from './utils';
+import { colLetter, naWrap } from './utils';
 
 const SPARE_ROWS = 10;
 const BLOCK_WIDTH = 4;  // 3 data columns + 1 spacer
@@ -58,7 +58,7 @@ export function generateDataSummaryTab(
         formula: `IF(${valCl}${r}="","",COUNTIFS(${cleanRange},${valCl}${r}))`
       };
       ws.getCell(r, c + 2).value = {
-        formula: `IF(${valCl}${r}="","",${cntCl}${r}/${cntCl}${totalRow})`
+        formula: `IF(${valCl}${r}="","",${naWrap(`${cntCl}${r}/${cntCl}${totalRow}`)})`
       };
     }
 
