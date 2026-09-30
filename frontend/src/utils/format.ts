@@ -13,7 +13,9 @@ export function formatCurrency(value: number, scaleFactor: number): string {
   if (abs >= 1_000_000_000) formatted = `$${(abs / 1_000_000_000).toFixed(1)}B`;
   else if (abs >= 1_000_000) formatted = `$${(abs / 1_000_000).toFixed(1)}M`;
   else if (abs >= 1_000) formatted = `$${(abs / 1_000).toFixed(1)}K`;
-  else formatted = `$${abs.toFixed(0)}`;
+  else if (abs >= 100) formatted = `$${abs.toFixed(0)}`;
+  else if (abs > 0) formatted = `$${abs.toFixed(2)}`;
+  else formatted = "$0";
   return isNegative ? `(${formatted})` : formatted;
 }
 

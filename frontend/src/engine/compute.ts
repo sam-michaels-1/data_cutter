@@ -503,7 +503,7 @@ export function computeDashboard(
   const arrOverTime = periods.map(p => {
     let total = 0;
     for (const [, custMap] of pivot) total += custMap.get(p) || 0;
-    return Math.round((total / sf) * 100) / 100;
+    return Math.round(total * 100) / 100 / sf;
   });
 
   // Growth
@@ -580,7 +580,7 @@ export function computeDashboard(
   const totalArrRaw = custArr.reduce((sum, [, v]) => sum + v, 0);
 
   const topCustomers = topCusts.map(([custId, arrVal], idx) => {
-    const trend = periods.map(p => Math.round((getPivotValue(pivot, custId, p) / sf) * 100) / 100);
+    const trend = periods.map(p => Math.round(getPivotValue(pivot, custId, p) * 100) / 100 / sf);
     let changePct: number | null = null;
     if (periods.length >= 2) {
       const prevArr = getPivotValue(pivot, custId, periods[periods.length - 2]) / sf;
@@ -595,7 +595,7 @@ export function computeDashboard(
     return {
       rank: idx + 1,
       name: custId,
-      arr: Math.round((arrVal / sf) * 100) / 100,
+      arr: Math.round(arrVal * 100) / 100 / sf,
       change_pct: changePct,
       pct_of_total: totalArrRaw > 0 ? Math.round((arrVal / totalArrRaw) * 10000) / 10000 : 0,
       trend,
@@ -627,7 +627,7 @@ export function computeDashboard(
       if (i < cohortIdx) return null;
       let total = 0;
       for (const c of activeCusts) total += getPivotValue(pivot, c, p);
-      return Math.round((total / sf) * 100) / 100;
+      return Math.round(total * 100) / 100 / sf;
     });
 
     const custCounts = periods.map((p, i) => {
@@ -659,7 +659,7 @@ export function computeDashboard(
     return {
       label: cohortLabel,
       count: startingCount,
-      starting_arr: Math.round((startingArr / sf) * 100) / 100,
+      starting_arr: Math.round(startingArr * 100) / 100 / sf,
       arr: arrValues,
       customers: custCounts,
       ndr,

@@ -63,7 +63,7 @@ export function computeCustomers(wb: Workbook, config: EngineConfig): CustomerLi
 
   const list: CustomerListEntry[] = [...names].map((name) => ({
     name,
-    current_arr: Math.round((getPivotValue(pivot, name, latest) / sf) * 100) / 100,
+    current_arr: Math.round(getPivotValue(pivot, name, latest) * 100) / 100 / sf,
   }));
   list.sort((a, b) => a.name.localeCompare(b.name));
   return list;
@@ -110,13 +110,13 @@ export function computeCustomerDetail(
   let prevRaw: number | null = null;
   for (const p of periods) {
     const raw = custMap.get(p) || 0;
-    const arr = Math.round((raw / sf) * 100) / 100;
+    const arr = Math.round(raw * 100) / 100 / sf;
     let change: number | null = null;
     let changePct: number | null = null;
     let event: CustomerEventType = 'inactive';
 
     if (prevRaw != null) {
-      change = Math.round(((raw - prevRaw) / sf) * 100) / 100;
+      change = Math.round((raw - prevRaw) * 100) / 100 / sf;
       changePct = prevRaw !== 0 ? Math.round((raw / prevRaw - 1) * 10000) / 10000 : null;
       if (prevRaw === 0 && raw > 0) event = seenNonZero ? 'reactivation' : 'new';
       else if (prevRaw > 0 && raw === 0) event = 'churn';
@@ -138,7 +138,7 @@ export function computeCustomerDetail(
   // Headline stats
   const latestLabel = periods[periods.length - 1];
   const currentRaw = custMap.get(latestLabel) || 0;
-  const currentArr = Math.round((currentRaw / sf) * 100) / 100;
+  const currentArr = Math.round(currentRaw * 100) / 100 / sf;
 
   // First non-zero period by raw value — a tiny ARR can round to 0 after
   // scaling, so checking the rounded timeline would skip it.
@@ -243,13 +243,13 @@ export function computeCustomerDetail(
     cohort: cohortMap.get(customerName) || '',
     status,
     current_arr: currentArr,
-    first_arr: Math.round((firstRaw / sf) * 100) / 100,
+    first_arr: Math.round(firstRaw * 100) / 100 / sf,
     first_period_label: firstIdx >= 0 ? periods[firstIdx] : '',
-    peak_arr: Math.round((peakRaw / sf) * 100) / 100,
+    peak_arr: Math.round(peakRaw * 100) / 100 / sf,
     peak_period_label: peakLabel,
-    lifetime_total: Math.round((lifetimeRaw / sf) * 100) / 100,
+    lifetime_total: Math.round(lifetimeRaw * 100) / 100 / sf,
     pct_of_total: totalRawAll > 0 ? Math.round((currentRaw / totalRawAll) * 10000) / 10000 : 0,
-    total_change: totalChangeRaw != null ? Math.round((totalChangeRaw / sf) * 100) / 100 : null,
+    total_change: totalChangeRaw != null ? Math.round(totalChangeRaw * 100) / 100 / sf : null,
     total_change_pct: totalChangePct,
     yoy_change_pct: yoyChangePct,
     cagr,
