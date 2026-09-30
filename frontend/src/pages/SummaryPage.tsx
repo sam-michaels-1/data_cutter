@@ -150,13 +150,19 @@ export default function SummaryPage() {
       {/* Summary table */}
       <div className="bg-white border border-gray-200 rounded-xl p-3 flex-1 min-h-0 overflow-hidden">
         <div className="overflow-auto h-full">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs table-fixed" style={{ minWidth: `${5.5 + columns.length * 6.5}rem` }}>
+            <colgroup>
+              <col style={{ width: "5.5rem" }} />
+              {columns.map((_, i) => (
+                <col key={i} />
+              ))}
+            </colgroup>
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
                 <th className="sticky top-0 z-10 text-left py-2 pr-3 font-medium whitespace-nowrap bg-white">Period</th>
                 <th className="sticky top-0 z-10 text-right py-2 px-2 font-medium whitespace-nowrap bg-gray-50">All</th>
                 {segmentColumns.map(v => (
-                  <th key={v} className="sticky top-0 z-10 text-right py-2 px-2 font-medium whitespace-nowrap bg-white">{v}</th>
+                  <th key={v} className="sticky top-0 z-10 text-right py-2 px-2 font-medium break-words bg-white">{v}</th>
                 ))}
               </tr>
             </thead>
