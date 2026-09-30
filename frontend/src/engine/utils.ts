@@ -45,6 +45,11 @@ export function makeCell(
   return `'${sheet}'!${dc}${colLetterStr}${dr}${row}`;
 }
 
+/** Wrap a formula so errors display as "n.a." instead of #DIV/0! / #N/A etc. */
+export function naWrap(formula: string): string {
+  return `IFERROR(${formula},"n.a.")`;
+}
+
 /** Build a SUMIFS formula. criteriaPairs: [[range, criteria], ...]. */
 export function sumifs(sumRange: string, ...criteriaPairs: [string, string][]): string {
   const parts = [sumRange];

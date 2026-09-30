@@ -5,7 +5,7 @@
 import type { Workbook, Worksheet } from 'exceljs';
 import type { EngineConfig, FilterBlock } from './types';
 import type { CleanLayout } from './utils';
-import { colLetter } from './utils';
+import { colLetter, naWrap } from './utils';
 
 export function generateCohortTab(
   wb: Workbook, config: EngineConfig,
@@ -209,7 +209,7 @@ function writeCohortBlock(
     for (let pi = 0; pi < numDates; pi++) {
       const cleanCol = cleanLayout.arr_start + pi;
       const sumRange = `'${cleanSheet}'!${colLetter(cleanCol)}$${cdrFirst}:${colLetter(cleanCol)}$${cdrLast}`;
-      ws.getCell(row, s1Start + pi).value = { formula: `SUMIFS(${sumRange},${criteriaStr})/${unitsCell}` };
+      ws.getCell(row, s1Start + pi).value = { formula: naWrap(`SUMIFS(${sumRange},${criteriaStr})/${unitsCell}`) };
     }
 
     // Section 2: Customer count
@@ -225,12 +225,12 @@ function writeCohortBlock(
     ws.getCell(row, s3Label).value = { formula: `${gl}${row}` };
     const s3sv = colLetter(s3StartVal);
     ws.getCell(row, s3StartVal).value = {
-      formula: `_xlfn.XLOOKUP(${colLetter(s3Label)}${row},${colLetter(s1Start)}$${rHeaders}:${colLetter(s1End)}$${rHeaders},${s1s}${row}:${s1e}${row})`
+      formula: naWrap(`_xlfn.XLOOKUP(${colLetter(s3Label)}${row},${colLetter(s1Start)}$${rHeaders}:${colLetter(s1End)}$${rHeaders},${s1s}${row}:${s1e}${row})`)
     };
 
     for (let pi = 0; pi < numDates - cohortIdx; pi++) {
       const arrCol = s1Start + cohortIdx + pi;
-      ws.getCell(row, s3DataStart + pi).value = { formula: `${colLetter(arrCol)}${row}/$${s3sv}${row}` };
+      ws.getCell(row, s3DataStart + pi).value = { formula: naWrap(`${colLetter(arrCol)}${row}/$${s3sv}${row}`) };
     }
 
     // Section 4: Logo Retention
@@ -239,12 +239,12 @@ function writeCohortBlock(
     ws.getCell(row, s4Label).value = { formula: `${gl}${row}` };
     const s4sv = colLetter(s4StartVal);
     ws.getCell(row, s4StartVal).value = {
-      formula: `_xlfn.XLOOKUP(${colLetter(s4Label)}${row},${colLetter(s2Start)}$${rHeaders}:${colLetter(s2End)}$${rHeaders},${s2s}${row}:${s2e}${row})`
+      formula: naWrap(`_xlfn.XLOOKUP(${colLetter(s4Label)}${row},${colLetter(s2Start)}$${rHeaders}:${colLetter(s2End)}$${rHeaders},${s2s}${row}:${s2e}${row})`)
     };
 
     for (let pi = 0; pi < numDates - cohortIdx; pi++) {
       const countCol = s2Start + cohortIdx + pi;
-      ws.getCell(row, s4DataStart + pi).value = { formula: `${colLetter(countCol)}${row}/$${s4sv}${row}` };
+      ws.getCell(row, s4DataStart + pi).value = { formula: naWrap(`${colLetter(countCol)}${row}/$${s4sv}${row}`) };
     }
   }
 
@@ -278,22 +278,22 @@ function writeCohortBlock(
   for (let pi = 0; pi < numDates; pi++) {
     const dc3 = s3DataStart + pi;
     const dc3l = colLetter(dc3);
-    ws.getCell(rTotal, dc3).value = { formula: `AVERAGE(${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow})` };
-    ws.getCell(rMedian, dc3).value = { formula: `MEDIAN(${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow})` };
+    ws.getCell(rTotal, dc3).value = { formula: naWrap(`AVERAGE(${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow})`) };
+    ws.getCell(rMedian, dc3).value = { formula: naWrap(`MEDIAN(${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow})`) };
 
     const s3svl = colLetter(s3StartVal);
     ws.getCell(rWeighted, dc3).value = {
-      formula: `SUMPRODUCT((${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}<>"")*${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow},$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow})/SUMPRODUCT((${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}<>"")*1,$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow})`
+      formula: naWrap(`SUMPRODUCT((${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}<>"")*${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow},$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow})/SUMPRODUCT((${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}<>"")*1,$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow})`)
     };
 
     const dc4 = s4DataStart + pi;
     const dc4l = colLetter(dc4);
-    ws.getCell(rTotal, dc4).value = { formula: `AVERAGE(${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow})` };
-    ws.getCell(rMedian, dc4).value = { formula: `MEDIAN(${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow})` };
+    ws.getCell(rTotal, dc4).value = { formula: naWrap(`AVERAGE(${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow})`) };
+    ws.getCell(rMedian, dc4).value = { formula: naWrap(`MEDIAN(${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow})`) };
 
     const s4svl = colLetter(s4StartVal);
     ws.getCell(rWeighted, dc4).value = {
-      formula: `SUMPRODUCT((${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}<>"")*${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow},$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow})/SUMPRODUCT((${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}<>"")*1,$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow})`
+      formula: naWrap(`SUMPRODUCT((${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}<>"")*${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow},$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow})/SUMPRODUCT((${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}<>"")*1,$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow})`)
     };
   }
 

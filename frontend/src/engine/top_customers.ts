@@ -5,7 +5,7 @@
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
 import type { CleanLayout } from './utils';
-import { colLetter } from './utils';
+import { colLetter, naWrap } from './utils';
 
 export const TOP_N = 25;
 export const CONCENTRATION_TIERS = [3, 5, 10, 25];
@@ -82,18 +82,18 @@ export function generateTopCustomersTab(
 
     const rnl = colLetter(rankNumCol);
     ws.getCell(row, custIdCol).value = {
-      formula: `_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanLayout.cust_id)}$${cdrFirst}:${colLetter(cleanLayout.cust_id)}$${cdrLast})`
+      formula: naWrap(`_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanLayout.cust_id)}$${cdrFirst}:${colLetter(cleanLayout.cust_id)}$${cdrLast})`)
     };
 
     for (let attrIdx = 0; attrIdx < numAttrs; attrIdx++) {
       const cleanAttrCol = cleanLayout.attr_start + attrIdx;
       ws.getCell(row, attrStart + attrIdx).value = {
-        formula: `_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanAttrCol)}$${cdrFirst}:${colLetter(cleanAttrCol)}$${cdrLast})`
+        formula: naWrap(`_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanAttrCol)}$${cdrFirst}:${colLetter(cleanAttrCol)}$${cdrLast})`)
       };
     }
 
     ws.getCell(row, cohortCol).value = {
-      formula: `_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanLayout.cohort)}$${cdrFirst}:${colLetter(cleanLayout.cohort)}$${cdrLast})`
+      formula: naWrap(`_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanLayout.cohort)}$${cdrFirst}:${colLetter(cleanLayout.cohort)}$${cdrLast})`)
     };
 
     // Section 1: ARR
@@ -116,7 +116,7 @@ export function generateTopCustomersTab(
     const totalRow = lastCustomerRow + 3;
     for (let i = 0; i < numDates; i++) {
       const arrCol = colLetter(s1Start + i);
-      ws.getCell(row, s3Start + i).value = { formula: `${arrCol}${row}/${arrCol}$${totalRow}` };
+      ws.getCell(row, s3Start + i).value = { formula: naWrap(`${arrCol}${row}/${arrCol}$${totalRow}`) };
     }
   }
 
@@ -134,7 +134,7 @@ export function generateTopCustomersTab(
       const prev = colLetter(s1Start + i - 1);
       ws.getCell(rTopTotal, s2Start + i - 1).value = { formula: `IFERROR(${curr}${rTopTotal}/${prev}${rTopTotal}-1,"n.a.")` };
     }
-    ws.getCell(rTopTotal, s3Start + i).value = { formula: `${arrCl}${rTopTotal}/${arrCl}$${rTotal}` };
+    ws.getCell(rTopTotal, s3Start + i).value = { formula: naWrap(`${arrCl}${rTopTotal}/${arrCl}$${rTotal}`) };
   }
 
   ws.getCell(rOther, custIdCol).value = '(+) Other Customers';
@@ -146,7 +146,7 @@ export function generateTopCustomersTab(
       const prev = colLetter(s1Start + i - 1);
       ws.getCell(rOther, s2Start + i - 1).value = { formula: `IFERROR(${curr}${rOther}/${prev}${rOther}-1,"n.a.")` };
     }
-    ws.getCell(rOther, s3Start + i).value = { formula: `${arrCl}${rOther}/${arrCl}$${rTotal}` };
+    ws.getCell(rOther, s3Start + i).value = { formula: naWrap(`${arrCl}${rOther}/${arrCl}$${rTotal}`) };
   }
 
   ws.getCell(rTotal, custIdCol).value = `Total ${metricLabel}`;
@@ -183,7 +183,7 @@ export function generateTopCustomersTab(
         const prev = colLetter(s1Start + i - 1);
         ws.getCell(row, s2Start + i - 1).value = { formula: `IFERROR(${curr}${row}/${prev}${row}-1,"n.a.")` };
       }
-      ws.getCell(row, s3Start + i).value = { formula: `${arrCl}${row}/${arrCl}$${rTotal}` };
+      ws.getCell(row, s3Start + i).value = { formula: naWrap(`${arrCl}${row}/${arrCl}$${rTotal}`) };
     }
   }
 
