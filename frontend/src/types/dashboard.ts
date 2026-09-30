@@ -15,6 +15,9 @@ export interface StatsData {
   yoy_growth_pct: number | null;
   lost_only_retention_pct: number | null;
   punitive_retention_pct: number | null;
+  annualized_lost_only_retention_pct: number | null;
+  annualized_punitive_retention_pct: number | null;
+  annualized_net_retention_pct: number | null;
 }
 
 export interface TopCustomer {

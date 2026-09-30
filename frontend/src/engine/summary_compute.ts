@@ -21,7 +21,7 @@ import {
 import { getIdentifierValue } from './histograms';
 
 export interface SummarySection {
-  key: 'gross' | 'net' | 'logo' | 'pct_of_total' | 'dollars' | 'customers' | 'per_customer';
+  key: 'gross' | 'net' | 'logo' | 'ann_gross' | 'ann_net' | 'pct_of_total' | 'dollars' | 'customers' | 'per_customer';
   label: string;
   format: 'pct' | 'currency' | 'count';
   rows: { period: string; values: (number | null)[] }[];
@@ -103,6 +103,10 @@ export function computeSummaryData(
   }
 
   const derived = computeDerived(pivot, periods, yoyOffset);
+  // Period-over-period derived data feeds the annualized sections (PoP
+  // movement x periods-per-year vs the prior period's BoP). Not used at
+  // annual granularity, where it would duplicate the YoY figures.
+  const popDerived = yoyOffset > 1 ? computeDerived(pivot, periods, 1) : null;
   const sf = scaleFactor;
 
   // Segment identifier and column groups
@@ -138,6 +142,10 @@ export function computeSummaryData(
   const upSum: number[][] = [];
   const bopCount: number[][] = [];
   const churnCount: number[][] = [];
+  const popBop: number[][] = [];
+  const popChurn: number[][] = [];
+  const popDown: number[][] = [];
+  const popUp: number[][] = [];
 
   for (const group of columnGroups) {
     const eopCol: number[] = [];
@@ -148,6 +156,10 @@ export function computeSummaryData(
     const upCol: number[] = [];
     const bopCntCol: number[] = [];
     const churnCntCol: number[] = [];
+    const popBopCol: number[] = [];
+    const popChurnCol: number[] = [];
+    const popDownCol: number[] = [];
+    const popUpCol: number[] = [];
 
     for (let i = 0; i < numPeriods; i++) {
       const p = periods[i];
@@ -179,6 +191,24 @@ export function computeSummaryData(
         churnCntCol.push(cc);
       }
     }
+    if (popDerived) {
+      for (let i = 1; i < numPeriods; i++) {
+        const p = periods[i];
+        const prev = periods[i - 1];
+        let b = 0, ch = 0, dn = 0, up = 0;
+        for (const cust of group) {
+          b += getPivotValue(pivot, cust, prev);
+          ch += popDerived.churn.get(cust)?.get(p) || 0;
+          dn += popDerived.downsell.get(cust)?.get(p) || 0;
+          up += popDerived.upsell.get(cust)?.get(p) || 0;
+        }
+        popBopCol.push(b);
+        popChurnCol.push(ch);
+        popDownCol.push(dn);
+        popUpCol.push(up);
+      }
+    }
+
     eop.push(eopCol);
     eopCount.push(eopCntCol);
     bop.push(bopCol);
@@ -187,10 +217,15 @@ export function computeSummaryData(
     upSum.push(upCol);
     bopCount.push(bopCntCol);
     churnCount.push(churnCntCol);
+    popBop.push(popBopCol);
+    popChurn.push(popChurnCol);
+    popDown.push(popDownCol);
+    popUp.push(popUpCol);
   }
 
   const numCols = columnGroups.length;
   const derivedRows = Math.max(numPeriods - yoyOffset, 0);
+  const annRows = popDerived ? numPeriods - 1 : 0;
 
   function rowValues(get: (ci: number, i: number) => number | null, count: number, offset: number) {
     const rows: { period: string; values: (number | null)[] }[] = [];
@@ -236,6 +271,26 @@ export function computeSummaryData(
         const bc = bopCount[ci][j];
         return bc !== 0 ? (bc - churnCount[ci][j]) / bc : null;
       }, derivedRows, yoyOffset),
+    },
+    {
+      key: 'ann_gross',
+      label: 'Annualized Gross Retention',
+      format: 'pct',
+      rows: rowValues((ci, i) => {
+        const j = i - 1;
+        const b = popBop[ci][j];
+        return b !== 0 ? (b + yoyOffset * (popChurn[ci][j] + popDown[ci][j])) / b : null;
+      }, annRows, 1),
+    },
+    {
+      key: 'ann_net',
+      label: 'Annualized Net Retention',
+      format: 'pct',
+      rows: rowValues((ci, i) => {
+        const j = i - 1;
+        const b = popBop[ci][j];
+        return b !== 0 ? (b + yoyOffset * (popChurn[ci][j] + popDown[ci][j] + popUp[ci][j])) / b : null;
+      }, annRows, 1),
     },
     {
       key: 'pct_of_total',

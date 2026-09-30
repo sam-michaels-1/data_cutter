@@ -110,11 +110,14 @@ export default function HistogramsPage() {
 
   if (!data) return null;
 
-  const { identifiers, available_granularities, granularity, scale_factor, data_type, attribute_options, latestPeriodLabel, priorPeriodLabel } = data;
+  const { identifiers, available_granularities, granularity, scale_factor, data_type, attribute_options, latestPeriodLabel, priorPeriodLabel, annPriorPeriodLabel } = data;
   const metricLabel = data_type === "revenue" ? "Revenue" : "ARR";
   const periodSubtitle = priorPeriodLabel && latestPeriodLabel
     ? `${priorPeriodLabel} to ${latestPeriodLabel}`
     : latestPeriodLabel ? `As of ${latestPeriodLabel}` : '';
+  const annSubtitle = annPriorPeriodLabel && latestPeriodLabel
+    ? `${annPriorPeriodLabel} to ${latestPeriodLabel}, annualized`
+    : undefined;
 
   // Initialize axis defaults from available identifiers
   const effectiveMekkoX = identifiers.includes(mekkoXAxis) ? mekkoXAxis : "Cohort";
@@ -229,7 +232,10 @@ export default function HistogramsPage() {
         <RetentionGrids
           netRetention={data.netRetentionGrid}
           lossRetention={data.lossRetentionGrid}
+          annNetRetention={granularity !== 'annual' ? data.annNetRetentionGrid : undefined}
+          annLossRetention={granularity !== 'annual' ? data.annLossRetentionGrid : undefined}
           subtitle={periodSubtitle}
+          annSubtitle={annSubtitle}
         />
       </div>
     </div>

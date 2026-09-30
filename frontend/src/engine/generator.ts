@@ -176,7 +176,8 @@ export async function generateDataPack(
         formatRetentionTab(
           retWs, config, filterBlocks, numDerived, numAttrs,
           s1Label, s1Start, s1End, s2Label, s2Start, s2End,
-          s3Label, s3Start, s3End, filterStartCol, cohortFc);
+          s3Label, s3Start, s3End, filterStartCol, cohortFc,
+          yoyOffset > 1);
       }
     }
   }

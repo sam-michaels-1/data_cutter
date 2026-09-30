@@ -28,7 +28,7 @@ function AxisSelector({ label, value, options, onChange }: {
   );
 }
 
-const RETENTION_KEYS = new Set<SummarySection["key"]>(["gross", "net", "logo"]);
+const RETENTION_KEYS = new Set<SummarySection["key"]>(["gross", "net", "logo", "ann_gross", "ann_net"]);
 
 export default function SummaryPage() {
   const { sessionId } = useSession();
@@ -202,7 +202,7 @@ export default function SummaryPage() {
       </div>
 
       <p className="text-[10px] text-gray-400">
-        Gross Retention = (BoP + Churn + Downsell) / BoP; Net Retention adds Upsell; Logo Retention = (BoP customers − churned customers) / BoP customers. BoP = the prior-year period.
+        Gross Retention = (BoP + Churn + Downsell) / BoP; Net Retention adds Upsell; Logo Retention = (BoP customers − churned customers) / BoP customers. BoP = the prior-year period. Annualized sections take each period's movement, scale it to a full year (×12 monthly, ×4 quarterly), and divide by the prior period's BoP.
       </p>
     </div>
   );
