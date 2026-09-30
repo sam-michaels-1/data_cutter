@@ -96,12 +96,12 @@ export function generateTopCustomersTab(
       formula: naWrap(`_xlfn.XLOOKUP($${rnl}${row},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},'${cleanSheetName}'!${colLetter(cleanLayout.cohort)}$${cdrFirst}:${colLetter(cleanLayout.cohort)}$${cdrLast})`)
     };
 
-    // Section 1: ARR
-    const cidl = colLetter(custIdCol);
+    // Section 1: ARR — match on the clean rank column so a row whose
+    // XLOOKUP'ed customer ID resolved to 'n.a.' simply totals zero.
     for (let i = 0; i < numDates; i++) {
       const cleanCol = cleanLayout.arr_start + i;
       ws.getCell(row, s1Start + i).value = {
-        formula: `SUMIFS('${cleanSheetName}'!${colLetter(cleanCol)}$${cdrFirst}:${colLetter(cleanCol)}$${cdrLast},'${cleanSheetName}'!$${cleanCustIdCol}$${cdrFirst}:$${cleanCustIdCol}$${cdrLast},$${cidl}${row})/${unitsCell}`
+        formula: `SUMIFS('${cleanSheetName}'!${colLetter(cleanCol)}$${cdrFirst}:${colLetter(cleanCol)}$${cdrLast},'${cleanSheetName}'!$${cleanRankCol}$${cdrFirst}:$${cleanRankCol}$${cdrLast},$${rnl}${row})/${unitsCell}`
       };
     }
 

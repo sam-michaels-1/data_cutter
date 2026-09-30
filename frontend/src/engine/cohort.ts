@@ -281,9 +281,14 @@ function writeCohortBlock(
     ws.getCell(rTotal, dc3).value = { formula: naWrap(`AVERAGE(${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow})`) };
     ws.getCell(rMedian, dc3).value = { formula: naWrap(`MEDIAN(${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow})`) };
 
+    // Weighted averages exclude any cohort whose ratio (or starting
+    // size) resolved to 'n.a.' rather than letting the text error out
+    // the whole column.
     const s3svl = colLetter(s3StartVal);
+    const s3Rng = `${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}`;
+    const s3wRng = `$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow}`;
     ws.getCell(rWeighted, dc3).value = {
-      formula: naWrap(`SUMPRODUCT((${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}<>"")*${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow},$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow})/SUMPRODUCT((${dc3l}${firstCohortRow}:${dc3l}${lastCohortRow}<>"")*1,$${s3svl}${firstCohortRow}:$${s3svl}${lastCohortRow})`)
+      formula: naWrap(`SUMPRODUCT(--ISNUMBER(${s3Rng}),IFERROR(${s3Rng},0),IFERROR(${s3wRng},0))/SUMPRODUCT(--ISNUMBER(${s3Rng}),IFERROR(${s3wRng},0))`)
     };
 
     const dc4 = s4DataStart + pi;
@@ -292,8 +297,10 @@ function writeCohortBlock(
     ws.getCell(rMedian, dc4).value = { formula: naWrap(`MEDIAN(${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow})`) };
 
     const s4svl = colLetter(s4StartVal);
+    const s4Rng = `${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}`;
+    const s4wRng = `$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow}`;
     ws.getCell(rWeighted, dc4).value = {
-      formula: naWrap(`SUMPRODUCT((${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}<>"")*${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow},$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow})/SUMPRODUCT((${dc4l}${firstCohortRow}:${dc4l}${lastCohortRow}<>"")*1,$${s4svl}${firstCohortRow}:$${s4svl}${lastCohortRow})`)
+      formula: naWrap(`SUMPRODUCT(--ISNUMBER(${s4Rng}),IFERROR(${s4Rng},0),IFERROR(${s4wRng},0))/SUMPRODUCT(--ISNUMBER(${s4Rng}),IFERROR(${s4wRng},0))`)
     };
   }
 
