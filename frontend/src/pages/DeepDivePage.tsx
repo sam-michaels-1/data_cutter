@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,6 +14,12 @@ import { getCurrentWorkbook, getCurrentConfig } from "../api/client";
 import { computeCustomers, computeCustomerDetail } from "../engine/customer_detail";
 import { formatCurrency, formatPct } from "../utils/format";
 import type { CustomerDetail, CustomerEventType } from "../types/dashboard";
+
+const POP_PCT_LABEL: Record<string, string> = {
+  monthly: "MoM %",
+  quarterly: "QoQ %",
+  annual: "YoY %",
+};
 
 const STATUS_STYLES: Record<string, string> = {
   Growth: "text-emerald-700 bg-emerald-100",
@@ -242,26 +248,34 @@ export default function DeepDivePage() {
         </h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="period" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.8} vertical={false} />
+              <XAxis
+                dataKey="period"
+                tick={{ fontSize: 11, fill: "#6B7280" }}
+                axisLine={{ stroke: "#D1D5DB" }}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
               <YAxis
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: "#6B7280" }}
                 tickFormatter={(v: number) => formatCurrency(v, sf)}
+                axisLine={false}
+                tickLine={false}
                 width={70}
               />
               <Tooltip
                 formatter={(value) => [formatCurrency(Number(value), sf), metricLabel]}
+                contentStyle={{
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
+                  color: "#111827",
+                  fontSize: 12,
+                }}
               />
-              <Area
-                type="monotone"
-                dataKey="arr"
-                stroke="#14B8A6"
-                fill="#14B8A6"
-                fillOpacity={0.15}
-                strokeWidth={2}
-              />
-            </AreaChart>
+              <Bar dataKey="arr" fill="#14B8A6" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -279,7 +293,9 @@ export default function DeepDivePage() {
                   <th className="sticky top-0 z-10 text-left py-2 pr-4 bg-white">Period</th>
                   <th className="sticky top-0 z-10 text-right py-2 pr-4 bg-white">{metricLabel}</th>
                   <th className="sticky top-0 z-10 text-right py-2 pr-4 bg-white">Change</th>
-                  <th className="sticky top-0 z-10 text-right py-2 pr-4 bg-white">% Change</th>
+                  <th className="sticky top-0 z-10 text-right py-2 pr-4 bg-white">
+                    {POP_PCT_LABEL[detail.granularity] ?? "% Change"}
+                  </th>
                   <th className="sticky top-0 z-10 text-center py-2 bg-white">Event</th>
                 </tr>
               </thead>
