@@ -35,10 +35,11 @@ export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFa
 
   if (!section.rows.length || !segments.length) return null;
 
+  // Internal keys avoid collisions with segment values like "All" or "period".
   const chartData = section.rows.map(row => {
     const point: Record<string, number | string | null> = { period: row.period };
     row.values.forEach((v, ci) => {
-      point[columns[ci]] = v;
+      point[`__col${ci}`] = v;
     });
     return point;
   });
@@ -99,7 +100,8 @@ export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFa
             <Area
               key={seg}
               type="monotone"
-              dataKey={seg}
+              dataKey={`__col${i + 1}`}
+              name={seg}
               stackId="1"
               stroke={COLORS[i % COLORS.length]}
               fill={COLORS[i % COLORS.length]}
@@ -111,7 +113,8 @@ export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFa
           {!isShare && (
             <Line
               type="monotone"
-              dataKey={columns[0]}
+              dataKey="__col0"
+              name={columns[0]}
               stroke="#111827"
               strokeWidth={1.5}
               strokeDasharray="4 3"

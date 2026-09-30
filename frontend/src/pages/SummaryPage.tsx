@@ -149,7 +149,7 @@ export default function SummaryPage() {
       </div>
 
       {/* Summary table */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 flex-1 min-h-0 overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl p-3 flex-1 min-h-[12rem] overflow-hidden">
         <div className="overflow-auto h-full">
           <table className="w-full text-xs table-fixed" style={{ minWidth: `${5.5 + columns.length * 6.5}rem` }}>
             <colgroup>
