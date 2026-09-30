@@ -167,7 +167,7 @@ export function formatControlTab(ws: Worksheet, checkTabs?: [string, string][]):
   }
 }
 
-export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').CleanLayout, firstDataRow: number, lastDataRow: number, _granularity: string): void {
+export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').CleanLayout, firstDataRow: number, lastDataRow: number, granularity: string): void {
   const maxCol = layout.new_biz_end;
 
   // Base font
@@ -208,6 +208,16 @@ export function formatCleanDataTab(ws: Worksheet, layout: import('./utils').Clea
   // Date format on row 6 ARR columns
   for (let c = layout.arr_start; c <= layout.arr_end; c++) {
     setNumFmt(ws, 6, c, NF_DATE);
+  }
+
+  // The derived sections' date cells are formulas referencing the ARR
+  // dates — without a date format they render as raw serial numbers.
+  // Quarterly/annual keep real dates on the 'Month' helper row (4);
+  // monthly puts them on the row-6 headers.
+  const derivedDateRow = granularity === 'monthly' ? 6 : 4;
+  const derivedDateFmt = granularity === 'monthly' ? NF_DATE : 'm/d/yyyy';
+  for (let c = layout.churn_start; c <= layout.new_biz_end; c++) {
+    setNumFmt(ws, derivedDateRow, c, derivedDateFmt);
   }
 
   // ARR data
