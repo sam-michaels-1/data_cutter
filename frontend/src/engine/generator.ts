@@ -18,9 +18,14 @@ import {
   formatRawDataTab, applyFormulaColoring, removeGridlines, applyTabColors
 } from './formatting';
 
-const QOQ_KEY = 'quarterly_qoq';
-const QOQ_CLEAN_SHEET = 'Clean Quarterly Data (QoQ)';
-const QOQ_RETENTION_SHEET = 'Quarterly Retention (QoQ)';
+/** Period-over-period variants: a clean tab comparing each period to the
+ *  immediately prior one, plus a retention tab whose three Section 1
+ *  retention rows are annualized by periods-per-year (MoM ×12, QoQ ×4). */
+const POP_TABS: Record<string, { cleanSheet: string; retentionSheet: string; label: string }> = {
+  monthly: { cleanSheet: 'Clean Monthly Data (MoM)', retentionSheet: 'Monthly Retention (MoM)', label: 'Monthly (MoM)' },
+  quarterly: { cleanSheet: 'Clean Quarterly Data (QoQ)', retentionSheet: 'Quarterly Retention (QoQ)', label: 'Quarterly (QoQ)' },
+};
+const popKey = (g: string) => `${g}_pop`;
 
 function colNumFromLetter(letter: string): number {
   let result = 0;
@@ -180,8 +185,7 @@ export async function generateDataPack(
       formatRetentionTab(
         retWs, config, filterBlocks, numDerived, numAttrs,
         s1Label, s1Start, s1End, s2Label, s2Start, s2End,
-        s3Label, s3Start, s3End, filterStartCol, cohortFc,
-        (opts.annualizeFactor ?? 0) > 0);
+        s3Label, s3Start, s3End, filterStartCol, cohortFc);
     }
   };
 
@@ -191,17 +195,20 @@ export async function generateDataPack(
     }
   }
 
-  // --- Quarter-over-quarter retention (annualized at 4 quarters/year) ---
-  if ('quarterly' in cleanTabs && getAvailableGranularities(granularity, outputGrans).includes('quarterly')) {
-    log(`Generating ${QOQ_CLEAN_SHEET}...`);
-    const qoqClean = generatePeriodOverPeriodCleanData(
-      wb, config, cleanTabs['quarterly'], QOQ_CLEAN_SHEET, 'Quarterly');
-    cleanTabs[QOQ_KEY] = qoqClean;
-    writeRetention('quarterly', qoqClean, {
-      sheetName: QOQ_RETENTION_SHEET,
-      titleLabel: 'Quarterly (QoQ)',
-      annualizeFactor: getYoyOffset('quarterly'),
-    });
+  // --- Period-over-period retention tabs (annualized: MoM ×12, QoQ ×4) ---
+  for (const g of ['monthly', 'quarterly'] as const) {
+    const pop = POP_TABS[g];
+    if (g in cleanTabs && getAvailableGranularities(granularity, outputGrans).includes(g)) {
+      log(`Generating ${pop.cleanSheet}...`);
+      const popClean = generatePeriodOverPeriodCleanData(
+        wb, config, cleanTabs[g], pop.cleanSheet, g === 'monthly' ? 'Monthly' : 'Quarterly');
+      cleanTabs[popKey(g)] = popClean;
+      writeRetention(g, popClean, {
+        sheetName: pop.retentionSheet,
+        titleLabel: pop.label,
+        annualizeFactor: getYoyOffset(g),
+      });
+    }
   }
 
   // --- Cohort tabs ---
@@ -329,7 +336,7 @@ export async function generateDataPack(
   // --- Format Clean Data tabs ---
   const cleanFormatKeys: [string, string][] = [
     ...getAvailableGranularities(granularity, outputGrans).map(g => [g, g] as [string, string]),
-    [QOQ_KEY, 'quarterly'],
+    ...(['monthly', 'quarterly'] as const).map(g => [popKey(g), g] as [string, string]),
   ];
   for (const [key, g] of cleanFormatKeys) {
     if (key in cleanTabs) {
@@ -571,8 +578,11 @@ function addControlChecks(wb: ExcelJS.Workbook, granularity: string, outputGrans
       checkTabs.push([`${capitalize(g)} Retention Check`, retName]);
     }
   }
-  if (wb.getWorksheet(QOQ_RETENTION_SHEET)) {
-    checkTabs.push(['Quarterly Retention (QoQ) Check', QOQ_RETENTION_SHEET]);
+  for (const g of ['monthly', 'quarterly'] as const) {
+    const pop = POP_TABS[g];
+    if (wb.getWorksheet(pop.retentionSheet)) {
+      checkTabs.push([`${pop.retentionSheet} Check`, pop.retentionSheet]);
+    }
   }
   for (const g of ['annual', 'quarterly'] as const) {
     const cohName = `${capitalize(g)} Cohort`;
@@ -616,15 +626,17 @@ function reorderSheets(wb: ExcelJS.Workbook, granularity: string): void {
     desiredOrder.push(
       'Annual Top Customer Analysis',
       'Annual Cohort', 'Quarterly Cohort',
-      'Annual Retention', 'Quarterly Retention', QOQ_RETENTION_SHEET, 'Monthly Retention',
-      'Clean Annual Data', 'Clean Quarterly Data', QOQ_CLEAN_SHEET, 'Clean Monthly Data',
+      'Annual Retention', 'Quarterly Retention', POP_TABS.quarterly.retentionSheet,
+      'Monthly Retention', POP_TABS.monthly.retentionSheet,
+      'Clean Annual Data', 'Clean Quarterly Data', POP_TABS.quarterly.cleanSheet,
+      'Clean Monthly Data', POP_TABS.monthly.cleanSheet,
     );
   } else if (granularity === 'quarterly') {
     desiredOrder.push(
       'Annual Top Customer Analysis',
       'Annual Cohort', 'Quarterly Cohort',
-      'Annual Retention', 'Quarterly Retention', QOQ_RETENTION_SHEET,
-      'Clean Annual Data', 'Clean Quarterly Data', QOQ_CLEAN_SHEET,
+      'Annual Retention', 'Quarterly Retention', POP_TABS.quarterly.retentionSheet,
+      'Clean Annual Data', 'Clean Quarterly Data', POP_TABS.quarterly.cleanSheet,
     );
   } else {
     desiredOrder.push(

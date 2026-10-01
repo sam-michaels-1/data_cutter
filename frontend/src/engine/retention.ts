@@ -8,21 +8,20 @@ import type { CleanLayout } from './utils';
 import { colLetter, naWrap } from './utils';
 
 const BLOCK_HEIGHT = 19;
-const ANN_EXTRA_ROWS = 3;
 
 export interface RetentionTabOptions {
   /** Overrides the default "<Granularity> Retention" sheet name. */
   sheetName?: string;
   /** Overrides the granularity label used in block titles. */
   titleLabel?: string;
-  /** When set, adds annualized retention rows that scale the block's
-   *  single-period movements by this many periods per year. */
+  /** When set, the three Section 1 retention rows report annualized values:
+   *  the block's single-period movements scaled by this many periods per year. */
   annualizeFactor?: number;
 }
 
-/** Rows per filter block; annualized tabs carry 3 extra retention rows. */
-export function retentionBlockHeight(hasAnn: boolean): number {
-  return hasAnn ? BLOCK_HEIGHT + ANN_EXTRA_ROWS : BLOCK_HEIGHT;
+/** Rows per filter block. */
+export function retentionBlockHeight(): number {
+  return BLOCK_HEIGHT;
 }
 
 export function generateRetentionTab(
@@ -42,7 +41,7 @@ export function generateRetentionTab(
   const numAttrs = cleanLayout.num_attrs;
   const attrNames = Object.keys(config.attributes);
   const yoyOffset = cleanLayout.yoy_offset;
-  const blockHeight = retentionBlockHeight(annualizeFactor > 0);
+  const blockHeight = retentionBlockHeight();
 
   const filterStartCol = 2;
   const cohortFc = filterStartCol + numAttrs;
@@ -125,11 +124,8 @@ function writeRetentionBlock(
   const rPunitRet = start + 14;
   const rNetRet = start + 15;
   const hasAnn = annualizeFactor > 0;
-  const rAnnLostRet = hasAnn ? start + 16 : -1;
-  const rAnnPunitRet = hasAnn ? start + 17 : -1;
-  const rAnnNetRet = hasAnn ? start + 18 : -1;
-  const rNlPct = start + (hasAnn ? 19 : 16);
-  const rNlGrowth = start + (hasAnn ? 20 : 17);
+  const rNlPct = start + 16;
+  const rNlGrowth = start + 17;
 
   // Title
   ws.getCell(rTitle, s1Label).value = `${title} ${titleLabel} Retention Analysis`;
@@ -156,7 +152,6 @@ function writeRetentionBlock(
 
   // Filter values
   const allDataRows = [rBop, rChurn, rDownsell, rUpsell, rRetained, rNewLogo, rEop, rGrowth, rCheck, rLostRet, rPunitRet, rNetRet];
-  if (hasAnn) allDataRows.push(rAnnLostRet, rAnnPunitRet, rAnnNetRet);
   allDataRows.push(rNlPct, rNlGrowth);
   for (let attrIdx = 0; attrIdx < attrNames.length; attrIdx++) {
     const fc = filterStart + attrIdx;
@@ -208,13 +203,14 @@ function writeRetentionBlock(
   ws.getCell(rEop, s1Label).value = `EoP ${metricLabel}`;
   ws.getCell(rGrowth, s1Label).value = '% Growth';
   ws.getCell(rCheck, s1Label).value = 'Check';
-  ws.getCell(rLostRet, s1Label).value = '% Lost-Only Retention';
-  ws.getCell(rPunitRet, s1Label).value = '% Punitive Retention';
-  ws.getCell(rNetRet, s1Label).value = '% Net Retention';
   if (hasAnn) {
-    ws.getCell(rAnnLostRet, s1Label).value = '% Annualized Lost-Only Retention';
-    ws.getCell(rAnnPunitRet, s1Label).value = '% Annualized Punitive Retention';
-    ws.getCell(rAnnNetRet, s1Label).value = '% Annualized Net Retention';
+    ws.getCell(rLostRet, s1Label).value = '% Annualized Lost-Only Retention';
+    ws.getCell(rPunitRet, s1Label).value = '% Annualized Punitive Retention';
+    ws.getCell(rNetRet, s1Label).value = '% Annualized Net Retention';
+  } else {
+    ws.getCell(rLostRet, s1Label).value = '% Lost-Only Retention';
+    ws.getCell(rPunitRet, s1Label).value = '% Punitive Retention';
+    ws.getCell(rNetRet, s1Label).value = '% Net Retention';
   }
   ws.getCell(rNlPct, s1Label).value = '% New Logo % of BoP';
   ws.getCell(rNlGrowth, s1Label).value = '% New Logo Growth';
@@ -223,7 +219,13 @@ function writeRetentionBlock(
     const dc = s1Start + i;
     const dcl = colLetter(dc);
 
-    ws.getCell(rBop, dc).value = { formula: buildSumifs(cleanLayout.arr_start + i, rBop) };
+    // BoP equals the EoP column ending at the same date once one exists;
+    // a direct link so the value can't drift from the prior period's EoP
+    if (i >= yoyOffset) {
+      ws.getCell(rBop, dc).value = { formula: `${colLetter(s1Start + i - yoyOffset)}${rEop}` };
+    } else {
+      ws.getCell(rBop, dc).value = { formula: buildSumifs(cleanLayout.arr_start + i, rBop) };
+    }
     ws.getCell(rChurn, dc).value = { formula: buildSumifs(cleanLayout.churn_start + i, rChurn) };
     ws.getCell(rDownsell, dc).value = { formula: buildSumifs(cleanLayout.downsell_start + i, rDownsell) };
     ws.getCell(rUpsell, dc).value = { formula: buildSumifs(cleanLayout.upsell_start + i, rUpsell) };
@@ -238,16 +240,16 @@ function writeRetentionBlock(
     const eopRng = `'${cleanSheet}'!${eopCl}$${cdrFirst}:${eopCl}$${cdrLast}`;
     ws.getCell(rCheck, dc).value = { formula: `${dcl}${rEop}*${unitsCell}-SUMIFS(${eopRng},${criteria(rCheck)})` };
 
-    ws.getCell(rLostRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rChurn})/${dcl}${rBop}`) };
-    ws.getCell(rPunitRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rDownsell})/${dcl}${rBop}`) };
-    ws.getCell(rNetRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rUpsell})/${dcl}${rBop}`) };
-
     if (hasAnn) {
       const m = annualizeFactor;
       const bop = `${dcl}${rBop}`;
-      ws.getCell(rAnnLostRet, dc).value = { formula: naWrap(`(${bop}+${dcl}${rChurn}*${m})/${bop}`) };
-      ws.getCell(rAnnPunitRet, dc).value = { formula: naWrap(`(${bop}+(${dcl}${rChurn}+${dcl}${rDownsell})*${m})/${bop}`) };
-      ws.getCell(rAnnNetRet, dc).value = { formula: naWrap(`(${bop}+(${dcl}${rChurn}+${dcl}${rDownsell}+${dcl}${rUpsell})*${m})/${bop}`) };
+      ws.getCell(rLostRet, dc).value = { formula: naWrap(`(${bop}+${dcl}${rChurn}*${m})/${bop}`) };
+      ws.getCell(rPunitRet, dc).value = { formula: naWrap(`(${bop}+(${dcl}${rChurn}+${dcl}${rDownsell})*${m})/${bop}`) };
+      ws.getCell(rNetRet, dc).value = { formula: naWrap(`(${bop}+(${dcl}${rChurn}+${dcl}${rDownsell}+${dcl}${rUpsell})*${m})/${bop}`) };
+    } else {
+      ws.getCell(rLostRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rChurn})/${dcl}${rBop}`) };
+      ws.getCell(rPunitRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rDownsell})/${dcl}${rBop}`) };
+      ws.getCell(rNetRet, dc).value = { formula: naWrap(`SUM(${dcl}${rBop}:${dcl}${rUpsell})/${dcl}${rBop}`) };
     }
 
     ws.getCell(rNlPct, dc).value = { formula: naWrap(`${dcl}${rNewLogo}/${dcl}${rBop}`) };
@@ -273,7 +275,11 @@ function writeRetentionBlock(
     const dc = s2Start + i;
     const dcl = colLetter(dc);
 
-    ws.getCell(rBop, dc).value = { formula: buildCountifsNonzero(cleanLayout.arr_start + i, rBop) };
+    if (i >= yoyOffset) {
+      ws.getCell(rBop, dc).value = { formula: `${colLetter(s2Start + i - yoyOffset)}${rRetained}` };
+    } else {
+      ws.getCell(rBop, dc).value = { formula: buildCountifsNonzero(cleanLayout.arr_start + i, rBop) };
+    }
 
     const churnCol = cleanLayout.churn_start + i;
     const cl = colLetter(churnCol);

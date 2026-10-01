@@ -25,10 +25,10 @@ const strVal = (ws, r, c) => {
   return null;
 };
 
-function findLabelCol(ws) {
+function findLabelCol(ws, needle = '% Net Retention') {
   for (let c = 1; c <= ws.columnCount; c++)
     for (let r = 1; r <= Math.min(ws.rowCount, 300); r++)
-      if (strVal(ws, r, c) === '% Net Retention') return c;
+      if (strVal(ws, r, c) === needle) return c;
   return -1;
 }
 function titleRows(ws) {   // block titles only: contain granularity word, end with 'Retention Analysis'
@@ -42,37 +42,53 @@ function titleRows(ws) {   // block titles only: contain granularity word, end w
 }
 
 const qoqWs = wb.getWorksheet('Quarterly Retention (QoQ)');
-const lc = findLabelCol(qoqWs);
-const expectedSeq = [
-  '% Lost-Only Retention', '% Punitive Retention', '% Net Retention',
+const lc = findLabelCol(qoqWs, '% Annualized Net Retention');
+check('QoQ tab: Section 1 label column located', lc > 0, `col=${lc}`);
+
+// QoQ tab: only the annualized retention rows (plain % Lost-Only/Punitive/Net removed)
+const qoqSeq = [
   '% Annualized Lost-Only Retention', '% Annualized Punitive Retention',
   '% Annualized Net Retention', '% New Logo % of BoP', '% New Logo Growth',
 ];
 let allOk = true, blocksChecked = 0;
 for (let r = 1; r <= qoqWs.rowCount; r++) {
-  if (strVal(qoqWs, r, lc) === '% Lost-Only Retention') {
+  if (strVal(qoqWs, r, lc) === qoqSeq[0]) {
     blocksChecked++;
-    expectedSeq.forEach((exp, i) => {
+    qoqSeq.forEach((exp, i) => {
       if (strVal(qoqWs, r + i, lc) !== exp) { allOk = false; }
     });
   }
 }
-check('QoQ tab: 3 annualized rows between % Net Retention and % New Logo % of BoP in every block',
+check('QoQ tab: annualized-only retention sequence in every block',
   allOk && blocksChecked > 0, `${blocksChecked} blocks checked`);
+let plainCount = 0;
+qoqWs.eachRow(row => row.eachCell(cell => {
+  if (['% Lost-Only Retention', '% Punitive Retention', '% Net Retention'].includes(cell.value)) plainCount++;
+}));
+check('QoQ tab: no non-annualized retention rows', plainCount === 0, `${plainCount} found`);
 {
   const tr = titleRows(qoqWs);
   const strides = tr.slice(1).map((r, i) => r - tr[i]);
-  check('QoQ tab: block pitch is 22 rows', strides.every(s => s === 22), `blocks=${tr.length} strides=${[...new Set(strides)]}`);
+  check('QoQ tab: block pitch is 19 rows', strides.every(s => s === 19), `blocks=${tr.length} strides=${[...new Set(strides)]}`);
 }
 for (const name of ['Quarterly Retention', 'Annual Retention']) {
   const ws = wb.getWorksheet(name);
-  let annCount = 0;
+  const lc2 = findLabelCol(ws, '% Net Retention');
+  const yoySeq = ['% Lost-Only Retention', '% Punitive Retention', '% Net Retention', '% New Logo % of BoP', '% New Logo Growth'];
+  let annCount = 0, seqOk = true, seqBlocks = 0;
   ws.eachRow(row => row.eachCell(cell => {
     const v = cell.value;
     const s = typeof v === 'string' ? v : (v && v.richText ? v.richText.map(t => t.text).join('') : '');
     if (/Annualized/.test(s)) annCount++;
   }));
+  for (let r = 1; r <= ws.rowCount; r++) {
+    if (strVal(ws, r, lc2) === yoySeq[0]) {
+      seqBlocks++;
+      yoySeq.forEach((exp, i) => { if (strVal(ws, r + i, lc2) !== exp) seqOk = false; });
+    }
+  }
   check(`YoY tab '${name}': no 'Annualized' labels`, annCount === 0, `${annCount} found`);
+  check(`YoY tab '${name}': standard retention sequence in every block`, seqOk && seqBlocks > 0, `${seqBlocks} blocks`);
   const tr = titleRows(ws);
   const strides = tr.slice(1).map((r, i) => r - tr[i]);
   check(`YoY tab '${name}': block pitch is 19 rows`, strides.every(s => s === 19), `blocks=${tr.length} strides=${[...new Set(strides)]}`);
@@ -87,6 +103,48 @@ const excelSerial = d => (d.getTime() - Date.UTC(1899, 11, 30)) / 86400000;
 
 const colNum = s => s.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
 const colName = n => { let s = ''; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; };
+
+// ---------- BoP = prior EoP direct links (purple font) ----------
+// BoP[i] links to the EoP column yoyOffset back; the first yoyOffset columns
+// keep SUMIFS/COUNTIFS. applyFormulaColoring turns direct links purple (7030A0).
+const PURPLE = /7030A0$/i;
+const fontArgb = (ws, r, c) => (ws.getCell(r, c).font && ws.getCell(r, c).font.color && ws.getCell(r, c).font.color.argb) || '';
+const retSheets = { 'Quarterly Retention': 4, 'Annual Retention': 1, 'Quarterly Retention (QoQ)': 1 };
+for (const [name, off] of Object.entries(retSheets)) {
+  const ws = wb.getWorksheet(name);
+  if (!ws) { check(`${name}: sheet present`, false); continue; }
+  const s1lc = findLabelCol(ws, name.includes('QoQ') ? '% Annualized Net Retention' : '% Net Retention');
+  const s2lc = findLabelCol(ws, '(-) Churned Customers');
+  const tr = titleRows(ws);
+  for (const [band, bandLc, eopOff] of [['s1 ARR', s1lc, 6], ['s2 Customers', s2lc, 4]]) {
+    let links = 0, purple = 0, first = 0, bad = [];
+    for (const t of tr) {
+      const rBop = t + 3, rEop = t + 3 + eopOff;
+      for (let c = bandLc + 1; ; c++) {
+        const v = ws.getCell(rBop, c).value;
+        if (v == null) break;
+        const i = c - (bandLc + 1);
+        const f = v && typeof v === 'object' ? v.formula : null;
+        if (i >= off) {
+          if (f === `${colName(c - off)}${rEop}`) links++;
+          else bad.push(`${colName(c)}${rBop}:${f}`);
+          if (PURPLE.test(fontArgb(ws, rBop, c))) purple++;
+        } else if (f && /^(SUMIFS|COUNTIFS)/.test(f)) first++;
+      }
+    }
+    check(`${name} ${band}: BoP links to EoP ${off} col(s) back, purple`, links > 0 && bad.length === 0 && purple === links,
+      `${links} links (${purple} purple), ${first} head cols${bad.length ? ' BAD: ' + bad.slice(0, 3).join(' | ') : ''}`);
+  }
+}
+{
+  // % Annualized Net Retention: bold label + indent + bold data (QoQ tab)
+  let r = -1;
+  for (let rr = 1; rr <= qoqWs.rowCount; rr++) if (strVal(qoqWs, rr, lc) === '% Annualized Net Retention') { r = rr; break; }
+  const labelCell = qoqWs.getCell(r, lc), dataCell = qoqWs.getCell(r, lc + 1);
+  check('QoQ tab: % Annualized Net Retention bold + indented',
+    !!labelCell.font?.bold && !!dataCell.font?.bold && (labelCell.alignment?.indent || 0) > 0,
+    `bold(label)=${labelCell.font?.bold} bold(data)=${dataCell.font?.bold} indent=${labelCell.alignment?.indent}`);
+}
 
 // Rewrite INDEX('<sheet>'!$A$r1:$B$r2,0,MATCH($X$n,'<sheet>'!$C$6:$D$6,0))
 // -> '<sheet>'!$<picked col>$r1:$<picked col>$r2  (HF can't INDEX a whole column)
