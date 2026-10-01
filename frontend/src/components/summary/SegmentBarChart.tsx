@@ -1,9 +1,8 @@
 import { useState } from "react";
 import {
   ResponsiveContainer,
-  ComposedChart,
-  Area,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -27,7 +26,7 @@ const COLORS = [
   "#A855F7", "#0EA5E9", "#F43F5E", "#22D3EE", "#D946EF",
 ];
 
-export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFactor, metricLabel = "ARR" }: Props) {
+export default function SegmentBarChart({ dollars, pctOfTotal, columns, scaleFactor, metricLabel = "ARR" }: Props) {
   const [mode, setMode] = useState<"dollars" | "share">("dollars");
   const section = mode === "share" && pctOfTotal ? pctOfTotal : dollars;
   const isShare = section.key === "pct_of_total";
@@ -70,7 +69,7 @@ export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFa
         )}
       </div>
       <ResponsiveContainer width="100%" height={190}>
-        <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
+        <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }} barCategoryGap="25%">
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.8} vertical={false} />
           <XAxis
             dataKey="period"
@@ -87,6 +86,7 @@ export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFa
           />
           <Tooltip
             formatter={(value, name) => [valueFormatter(Number(value)), String(name)]}
+            cursor={{ fill: "#F3F4F6" }}
             contentStyle={{
               backgroundColor: "#ffffff",
               border: "1px solid #E5E7EB",
@@ -97,32 +97,17 @@ export default function SegmentAreaChart({ dollars, pctOfTotal, columns, scaleFa
           />
           <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />
           {segments.map((seg, i) => (
-            <Area
+            <Bar
               key={seg}
-              type="monotone"
               dataKey={`__col${i + 1}`}
               name={seg}
               stackId="1"
-              stroke={COLORS[i % COLORS.length]}
               fill={COLORS[i % COLORS.length]}
-              fillOpacity={0.75}
-              strokeWidth={1}
+              radius={i === segments.length - 1 ? [3, 3, 0, 0] : 0}
               isAnimationActive={false}
             />
           ))}
-          {!isShare && (
-            <Line
-              type="monotone"
-              dataKey="__col0"
-              name={columns[0]}
-              stroke="#111827"
-              strokeWidth={1.5}
-              strokeDasharray="4 3"
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
-        </ComposedChart>
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

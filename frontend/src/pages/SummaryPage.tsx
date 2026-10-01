@@ -4,7 +4,7 @@ import { useSession } from "../components/SessionProvider";
 import { useSummaryData } from "../hooks/useSummaryData";
 import AttributeFilterBar from "../components/AttributeFilterBar";
 import { retentionColor } from "../components/histograms/colorScales";
-import SegmentAreaChart from "../components/summary/SegmentAreaChart";
+import SegmentBarChart from "../components/summary/SegmentBarChart";
 import type { SummarySection } from "../engine/summary_compute";
 import { formatCurrency } from "../utils/format";
 import type { Filters } from "../types/dashboard";
@@ -207,7 +207,7 @@ export default function SummaryPage() {
         const dollars = sections.find(s => s.key === "dollars");
         if (!dollars) return null;
         return (
-          <SegmentAreaChart
+          <SegmentBarChart
             dollars={dollars}
             pctOfTotal={sections.find(s => s.key === "pct_of_total")}
             columns={columns}
