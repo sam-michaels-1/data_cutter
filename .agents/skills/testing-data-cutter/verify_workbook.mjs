@@ -146,6 +146,32 @@ for (const [name, off] of Object.entries(retSheets)) {
     `bold(label)=${labelCell.font?.bold} bold(data)=${dataCell.font?.bold} indent=${labelCell.alignment?.indent}`);
 }
 
+// s1 '% Growth' row (EoP ARR % Growth): italic label+data, indented, whole-percent —
+// same treatment as the s2 'EoP Customers % Growth' row, on every retention tab.
+for (const name of Object.keys(retSheets)) {
+  const ws = wb.getWorksheet(name);
+  if (!ws) continue;
+  const lc2 = findLabelCol(ws, name.includes('QoQ') ? '% Annualized Net Retention' : '% Net Retention');
+  const tr = titleRows(ws);
+  let checked = 0, bad = [];
+  for (const t of tr) {
+    const r = t + 10; // rGrowth
+    const lbl = ws.getCell(r, lc2);
+    if (strVal(ws, r, lc2) !== '% Growth') { bad.push(`${name} block@${t} label=${strVal(ws, r, lc2)}`); continue; }
+    checked++;
+    if (!lbl.font?.italic) bad.push(`${name} r${r} label not italic`);
+    if ((lbl.alignment?.indent || 0) < 1) bad.push(`${name} r${r} label not indented`);
+    for (let c = lc2 + 1; c <= lc2 + 12; c++) {
+      const dc = ws.getCell(r, c);
+      if (dc.value == null) break;
+      if (!dc.font?.italic) { bad.push(`${name} ${colName(c)}${r} data not italic`); break; }
+      if (dc.numFmt && dc.numFmt.includes('.0')) { bad.push(`${name} ${colName(c)}${r} decimal pct ${dc.numFmt}`); break; }
+    }
+  }
+  check(`${name}: s1 % Growth italic + indented + whole-percent`, checked > 0 && bad.length === 0,
+    `${checked} blocks${bad.length ? ' BAD: ' + bad.slice(0, 3).join(' | ') : ''}`);
+}
+
 // Rewrite INDEX('<sheet>'!$A$r1:$B$r2,0,MATCH($X$n,'<sheet>'!$C$6:$D$6,0))
 // -> '<sheet>'!$<picked col>$r1:$<picked col>$r2  (HF can't INDEX a whole column)
 function rewriteColumnIndex(f, curSheetName) {

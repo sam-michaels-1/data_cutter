@@ -356,7 +356,7 @@ export function formatRetentionTab(
       const c = s1Start + i;
       for (const r of [rBop, rRetained, rEop]) setNumFmt(ws, r, c, NF_DOLLAR);
       for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rCheck]) setNumFmt(ws, r, c, NF_NUMBER);
-      setNumFmt(ws, rGrowth, c, NF_PCT_DEC);
+      setNumFmt(ws, rGrowth, c, NF_PCT);
       for (const r of [rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) setNumFmt(ws, r, c, NF_PCT_DEC);
       for (let r = rBop; r <= rNlGrowth; r++) setAlign(ws, r, c, 'right');
     }
@@ -396,7 +396,7 @@ export function formatRetentionTab(
     }
 
     // Indent sub-item labels in section 1
-    for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rNetRet]) {
+    for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rGrowth, rNetRet]) {
       const cell = ws.getCell(r, s1Label);
       cell.alignment = { ...cell.alignment, indent: 1 };
     }
@@ -414,7 +414,7 @@ export function formatRetentionTab(
     }
 
     // Italicize the percentage rows across all section 1 columns
-    for (const r of [rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) {
+    for (const r of [rGrowth, rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) {
       for (let c = 1; c <= maxCol; c++) {
         const cell = ws.getCell(r, c);
         cell.font = { ...cell.font, italic: true };
