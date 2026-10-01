@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../components/SessionProvider";
 import { useDashboard } from "../hooks/useDashboard";
+import { useSummaryData } from "../hooks/useSummaryData";
 import StatsCards from "../components/dashboard/StatsCards";
 import ARRBarChart from "../components/dashboard/ARRBarChart";
+import SegmentBarChart from "../components/dashboard/SegmentBarChart";
 import WaterfallChart from "../components/dashboard/WaterfallChart";
 import TopCustomersTable from "../components/dashboard/TopCustomersTable";
 import AttributeFilterBar from "../components/AttributeFilterBar";
@@ -13,16 +15,32 @@ export default function DashboardPage() {
   const { sessionId } = useSession();
   const navigate = useNavigate();
   const { data, loading, error, refetch } = useDashboard(sessionId);
+  const { data: summaryData, refetch: refetchSummary } = useSummaryData(sessionId);
   const [filters, setFilters] = useState<Filters>({});
+  const [segmentBy, setSegmentBy] = useState("");
 
   const handleGranularityChange = (g: string) => {
     refetch(g, { filters });
+    refetchSummary(g, { filters, identifier: segmentBy || undefined });
   };
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
     refetch(data?.granularity, { filters: newFilters });
+    refetchSummary(data?.granularity, { filters: newFilters, identifier: segmentBy || undefined });
   };
+
+  const handleSegmentByChange = (v: string) => {
+    setSegmentBy(v);
+    refetchSummary(data?.granularity, { filters, identifier: v });
+  };
+
+  // Keep the segment chart on the dashboard's granularity
+  useEffect(() => {
+    if (data?.granularity && summaryData && summaryData.granularity !== data.granularity) {
+      refetchSummary(data.granularity, { filters, identifier: segmentBy || undefined });
+    }
+  }, [data?.granularity, summaryData?.granularity, summaryData, refetchSummary, filters, segmentBy]);
 
   if (!sessionId) {
     return (
@@ -131,6 +149,27 @@ export default function DashboardPage() {
           <WaterfallChart waterfall={overview.waterfall} scaleFactor={scale_factor} />
         )}
       </div>
+
+      {/* Revenue/ARR over time by segment */}
+      {(() => {
+        const dollars = summaryData?.sections.find(s => s.key === "dollars");
+        if (!summaryData || !dollars) return null;
+        const segIdentifier = summaryData.identifiers.includes(segmentBy)
+          ? segmentBy
+          : summaryData.identifier;
+        return (
+          <SegmentBarChart
+            dollars={dollars}
+            pctOfTotal={summaryData.sections.find(s => s.key === "pct_of_total")}
+            columns={summaryData.columns}
+            scaleFactor={scale_factor}
+            metricLabel={metricLabel}
+            identifier={segIdentifier}
+            identifiers={summaryData.identifiers}
+            onIdentifierChange={handleSegmentByChange}
+          />
+        );
+      })()}
 
       {/* Top customers */}
       {overview.top_customers?.length > 0 && (
