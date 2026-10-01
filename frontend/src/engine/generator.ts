@@ -6,8 +6,8 @@ import ExcelJS from 'exceljs';
 import type { EngineConfig, FilterBlock, CleanTabResult } from './types';
 import { getYoyOffset, normalizeExcelDate, colLetter } from './utils';
 import { parseHeaderDate } from './detect';
-import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFromTable } from './clean_data';
-import { generateRetentionTab } from './retention';
+import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFromTable, generatePeriodOverPeriodCleanData } from './clean_data';
+import { generateRetentionTab, type RetentionTabOptions } from './retention';
 import { generateCohortTab } from './cohort';
 import { generateTopCustomersTab, TOP_N } from './top_customers';
 import { generateSummaryTab, computeSummarySections } from './summary';
@@ -17,6 +17,10 @@ import {
   formatCohortTab, formatTopCustomersTab, formatSummaryTab, formatDataSummaryTab,
   formatRawDataTab, applyFormulaColoring, removeGridlines, applyTabColors
 } from './formatting';
+
+const QOQ_KEY = 'quarterly_qoq';
+const QOQ_CLEAN_SHEET = 'Clean Quarterly Data (QoQ)';
+const QOQ_RETENTION_SHEET = 'Quarterly Retention (QoQ)';
 
 function colNumFromLetter(letter: string): number {
   let result = 0;
@@ -148,38 +152,56 @@ export async function generateDataPack(
   const numAttrs = attrNames.length;
 
   // --- Retention tabs ---
+  const writeRetention = (
+    g: string, clean: CleanTabResult, opts: RetentionTabOptions = {}
+  ) => {
+    const { sheetName, layout, firstDataRow, lastDataRow } = clean;
+    log(`Generating ${opts.sheetName ?? `${capitalize(g)} Retention`}...`);
+    const retSheet = generateRetentionTab(
+      wb, config, sheetName, layout, firstDataRow, lastDataRow, g, filterBlocks, opts);
+
+    // Format retention tab
+    const numDerived = layout.num_derived;
+    const filterStartCol = 2;
+    const cohortFc = filterStartCol + numAttrs;
+    const s1Label = cohortFc + 2;
+    const s1Start = s1Label + 1;
+    const s1End = s1Start + numDerived - 1;
+    const s2Label = s1End + 2;
+    const s2Start = s2Label + 1;
+    const s2End = s2Start + numDerived - 1;
+    const s3Label = s2End + 2;
+    const s3Start = s3Label + 1;
+    const s3End = s3Start + numDerived - 1;
+
+    log(`Formatting ${retSheet}...`);
+    const retWs = wb.getWorksheet(retSheet);
+    if (retWs) {
+      formatRetentionTab(
+        retWs, config, filterBlocks, numDerived, numAttrs,
+        s1Label, s1Start, s1End, s2Label, s2Start, s2End,
+        s3Label, s3Start, s3End, filterStartCol, cohortFc,
+        (opts.annualizeFactor ?? 0) > 0);
+    }
+  };
+
   for (const g of getAvailableGranularities(granularity, outputGrans)) {
     if (g in cleanTabs) {
-      const { sheetName, layout, firstDataRow, lastDataRow } = cleanTabs[g];
-      log(`Generating ${capitalize(g)} Retention...`);
-      generateRetentionTab(wb, config, sheetName, layout, firstDataRow, lastDataRow, g, filterBlocks);
-
-      // Format retention tab
-      const yoyOffset = getYoyOffset(g);
-      const numDerived = layout.num_dates - yoyOffset;
-      const filterStartCol = 2;
-      const cohortFc = filterStartCol + numAttrs;
-      const s1Label = cohortFc + 2;
-      const s1Start = s1Label + 1;
-      const s1End = s1Start + numDerived - 1;
-      const s2Label = s1End + 2;
-      const s2Start = s2Label + 1;
-      const s2End = s2Start + numDerived - 1;
-      const s3Label = s2End + 2;
-      const s3Start = s3Label + 1;
-      const s3End = s3Start + numDerived - 1;
-
-      const retSheet = `${capitalize(g)} Retention`;
-      log(`Formatting ${retSheet}...`);
-      const retWs = wb.getWorksheet(retSheet);
-      if (retWs) {
-        formatRetentionTab(
-          retWs, config, filterBlocks, numDerived, numAttrs,
-          s1Label, s1Start, s1End, s2Label, s2Start, s2End,
-          s3Label, s3Start, s3End, filterStartCol, cohortFc,
-          yoyOffset > 1);
-      }
+      writeRetention(g, cleanTabs[g]);
     }
+  }
+
+  // --- Quarter-over-quarter retention (annualized at 4 quarters/year) ---
+  if ('quarterly' in cleanTabs && getAvailableGranularities(granularity, outputGrans).includes('quarterly')) {
+    log(`Generating ${QOQ_CLEAN_SHEET}...`);
+    const qoqClean = generatePeriodOverPeriodCleanData(
+      wb, config, cleanTabs['quarterly'], QOQ_CLEAN_SHEET, 'Quarterly');
+    cleanTabs[QOQ_KEY] = qoqClean;
+    writeRetention('quarterly', qoqClean, {
+      sheetName: QOQ_RETENTION_SHEET,
+      titleLabel: 'Quarterly (QoQ)',
+      annualizeFactor: getYoyOffset('quarterly'),
+    });
   }
 
   // --- Cohort tabs ---
@@ -305,9 +327,13 @@ export async function generateDataPack(
   if (controlWs) formatControlTab(controlWs, checkTabs);
 
   // --- Format Clean Data tabs ---
-  for (const g of getAvailableGranularities(granularity, outputGrans)) {
-    if (g in cleanTabs) {
-      const { sheetName: sn, layout: ly, firstDataRow: fd, lastDataRow: ld } = cleanTabs[g];
+  const cleanFormatKeys: [string, string][] = [
+    ...getAvailableGranularities(granularity, outputGrans).map(g => [g, g] as [string, string]),
+    [QOQ_KEY, 'quarterly'],
+  ];
+  for (const [key, g] of cleanFormatKeys) {
+    if (key in cleanTabs) {
+      const { sheetName: sn, layout: ly, firstDataRow: fd, lastDataRow: ld } = cleanTabs[key];
       log(`Formatting ${sn}...`);
       const cleanWs = wb.getWorksheet(sn);
       if (cleanWs) formatCleanDataTab(cleanWs, ly, fd, ld, g);
@@ -545,6 +571,9 @@ function addControlChecks(wb: ExcelJS.Workbook, granularity: string, outputGrans
       checkTabs.push([`${capitalize(g)} Retention Check`, retName]);
     }
   }
+  if (wb.getWorksheet(QOQ_RETENTION_SHEET)) {
+    checkTabs.push(['Quarterly Retention (QoQ) Check', QOQ_RETENTION_SHEET]);
+  }
   for (const g of ['annual', 'quarterly'] as const) {
     const cohName = `${capitalize(g)} Cohort`;
     if (wb.getWorksheet(cohName)) {
@@ -587,15 +616,15 @@ function reorderSheets(wb: ExcelJS.Workbook, granularity: string): void {
     desiredOrder.push(
       'Annual Top Customer Analysis',
       'Annual Cohort', 'Quarterly Cohort',
-      'Annual Retention', 'Quarterly Retention', 'Monthly Retention',
-      'Clean Annual Data', 'Clean Quarterly Data', 'Clean Monthly Data',
+      'Annual Retention', 'Quarterly Retention', QOQ_RETENTION_SHEET, 'Monthly Retention',
+      'Clean Annual Data', 'Clean Quarterly Data', QOQ_CLEAN_SHEET, 'Clean Monthly Data',
     );
   } else if (granularity === 'quarterly') {
     desiredOrder.push(
       'Annual Top Customer Analysis',
       'Annual Cohort', 'Quarterly Cohort',
-      'Annual Retention', 'Quarterly Retention',
-      'Clean Annual Data', 'Clean Quarterly Data',
+      'Annual Retention', 'Quarterly Retention', QOQ_RETENTION_SHEET,
+      'Clean Annual Data', 'Clean Quarterly Data', QOQ_CLEAN_SHEET,
     );
   } else {
     desiredOrder.push(

@@ -5,6 +5,7 @@
 import type { Workbook, Worksheet, Style } from 'exceljs';
 import type { FilterBlock } from './types';
 import { colLetter } from './utils';
+import { retentionBlockHeight } from './retention';
 
 // Number formats
 const NF_DOLLAR = '* _(* "$"\\ #,##0_);_(* "$"\\ \\(#,##0\\);* \\-_);* @_)';
@@ -266,7 +267,7 @@ export function formatRetentionTab(
   hasAnn = false
 ): void {
   const maxCol = s3End;
-  const blockHeight = hasAnn ? 22 : 19;
+  const blockHeight = retentionBlockHeight(hasAnn);
   const maxRow = 5 + filterBlocks.length * blockHeight;
 
   // Base font
