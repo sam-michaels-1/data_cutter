@@ -4,6 +4,7 @@ import { useSession } from "../components/SessionProvider";
 import { useSummaryData } from "../hooks/useSummaryData";
 import AttributeFilterBar from "../components/AttributeFilterBar";
 import { retentionColor } from "../components/histograms/colorScales";
+import SegmentAreaChart from "../components/summary/SegmentAreaChart";
 import type { SummarySection } from "../engine/summary_compute";
 import { formatCurrency } from "../utils/format";
 import type { Filters } from "../types/dashboard";
@@ -148,7 +149,7 @@ export default function SummaryPage() {
       </div>
 
       {/* Summary table */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 flex-1 min-h-0 overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl p-3 flex-1 min-h-[12rem] overflow-hidden">
         <div className="overflow-auto h-full">
           <table className="w-full text-xs table-fixed" style={{ minWidth: `${5.5 + columns.length * 6.5}rem` }}>
             <colgroup>
@@ -200,6 +201,21 @@ export default function SummaryPage() {
           </table>
         </div>
       </div>
+
+      {/* Revenue/ARR over time by segment */}
+      {(() => {
+        const dollars = sections.find(s => s.key === "dollars");
+        if (!dollars) return null;
+        return (
+          <SegmentAreaChart
+            dollars={dollars}
+            pctOfTotal={sections.find(s => s.key === "pct_of_total")}
+            columns={columns}
+            scaleFactor={scale_factor}
+            metricLabel={metricLabel}
+          />
+        );
+      })()}
 
       <p className="text-[10px] text-gray-400">
         Gross Retention = (BoP + Churn + Downsell) / BoP; Net Retention adds Upsell; Logo Retention = (BoP customers − churned customers) / BoP customers. BoP = the prior-year period. Annualized sections take each period's movement, scale it to a full year (×12 monthly, ×4 quarterly), and divide by the prior period's BoP.
