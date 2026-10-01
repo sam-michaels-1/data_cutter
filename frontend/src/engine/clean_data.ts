@@ -682,3 +682,97 @@ function copyHelperRowsToDerived(ws: import('exceljs').Worksheet, layout: CleanL
     ws.getCell(helperRow, newBizCol).value = { formula: `${colLetter(upsellCol)}${helperRow}` };
   }
 }
+
+/**
+ * Generate a period-over-period copy of a clean data tab: ARR, attributes,
+ * cohort and helper rows link to the source tab, and the derived sections
+ * compare each period with the one immediately before it.
+ */
+export function generatePeriodOverPeriodCleanData(
+  wb: Workbook, config: EngineConfig,
+  source: CleanTabResult, sheetName: string, periodLabel: string
+): CleanTabResult {
+  const ws = wb.addWorksheet(sheetName);
+  const srcWs = wb.getWorksheet(source.sheetName);
+  const src = source.layout;
+  const srcSheet = source.sheetName;
+  const { firstDataRow, lastDataRow } = source;
+  const numDates = src.num_dates;
+  const layout = computeCleanLayout(src.num_attrs, numDates, 1);
+  const metricLabel = (config.data_type || 'arr') === 'arr' ? 'ARR' : 'Revenue';
+  const srcRef = (row: number, col: number) => ({ formula: `'${srcSheet}'!${colLetter(col)}${row}` });
+
+  // --- Row 1: Fiscal month end + column totals ---
+  ws.getCell(1, 1).value = 'Fiscal Month End:';
+  ws.getCell(1, 2).value = { formula: 'Control!C7' };
+  for (const sectionKey of ['arr', 'churn', 'downsell', 'upsell', 'new_biz'] as const) {
+    const start = layout[`${sectionKey}_start`];
+    const end = sectionKey === 'arr' ? layout.arr_end : layout[`${sectionKey}_end`];
+    for (let c = start; c <= end; c++) {
+      const cl = colLetter(c);
+      ws.getCell(1, c).value = { formula: `SUM(${cl}${firstDataRow}:${cl}${lastDataRow})` };
+    }
+  }
+
+  // --- Rows 2-4: Quarter / Year / Month helper rows ---
+  for (const helperRow of [2, 3, 4]) {
+    const label = srcWs?.getCell(helperRow, src.label).value;
+    if (!label) continue;
+    ws.getCell(helperRow, layout.label).value = label;
+    for (let i = 0; i < numDates; i++) {
+      ws.getCell(helperRow, layout.arr_start + i).value = srcRef(helperRow, src.arr_start + i);
+    }
+    copyHelperRowsToDerived(ws, layout, helperRow);
+  }
+
+  // --- Row 5: Section headers ---
+  ws.getCell(5, layout.cust_id).value = 'Customer Identifying Information';
+  ws.getCell(5, layout.arr_start).value = `${periodLabel} ${metricLabel} by Date`;
+  ws.getCell(5, layout.churn_start).value = 'Churn?';
+  ws.getCell(5, layout.downsell_start).value = 'Downsell?';
+  ws.getCell(5, layout.upsell_start).value = 'Upsell?';
+  ws.getCell(5, layout.new_biz_start).value = 'New Business Dollars?';
+
+  // --- Row 6: Column headers ---
+  for (let c = src.cust_id; c <= src.rank; c++) {
+    ws.getCell(6, c).value = srcWs?.getCell(6, c).value ?? null;
+  }
+  for (let i = 0; i < numDates; i++) {
+    ws.getCell(6, layout.arr_start + i).value = srcRef(6, src.arr_start + i);
+  }
+  for (let i = 0; i < layout.num_derived; i++) {
+    const churnCol = layout.churn_start + i;
+    ws.getCell(6, churnCol).value = { formula: `${colLetter(layout.arr_start + 1 + i)}6` };
+    ws.getCell(6, layout.downsell_start + i).value = { formula: `${colLetter(churnCol)}6` };
+    ws.getCell(6, layout.upsell_start + i).value = { formula: `${colLetter(layout.downsell_start + i)}6` };
+    ws.getCell(6, layout.new_biz_start + i).value = { formula: `${colLetter(layout.upsell_start + i)}6` };
+  }
+
+  // --- Customer data rows ---
+  for (let row = firstDataRow; row <= lastDataRow; row++) {
+    for (let c = src.cust_id; c <= src.rank; c++) {
+      ws.getCell(row, c).value = srcRef(row, c);
+    }
+    for (let i = 0; i < numDates; i++) {
+      ws.getCell(row, layout.arr_start + i).value = srcRef(row, src.arr_start + i);
+    }
+    for (let i = 0; i < layout.num_derived; i++) {
+      const priorRef = `${colLetter(layout.arr_start + i)}${row}`;
+      const currRef = `${colLetter(layout.arr_start + 1 + i)}${row}`;
+      ws.getCell(row, layout.churn_start + i).value = {
+        formula: `IF(AND(${currRef}=0,${priorRef}>0),-${priorRef},0)`
+      };
+      ws.getCell(row, layout.downsell_start + i).value = {
+        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
+      };
+      ws.getCell(row, layout.upsell_start + i).value = {
+        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
+      };
+      ws.getCell(row, layout.new_biz_start + i).value = {
+        formula: `IF(AND(${currRef}>0,${priorRef}=0),${currRef},0)`
+      };
+    }
+  }
+
+  return { sheetName, layout, firstDataRow, lastDataRow };
+}

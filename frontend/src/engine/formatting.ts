@@ -5,6 +5,7 @@
 import type { Workbook, Worksheet, Style } from 'exceljs';
 import type { FilterBlock } from './types';
 import { colLetter } from './utils';
+import { retentionBlockHeight } from './retention';
 
 // Number formats
 const NF_DOLLAR = '* _(* "$"\\ #,##0_);_(* "$"\\ \\(#,##0\\);* \\-_);* @_)';
@@ -262,11 +263,10 @@ export function formatRetentionTab(
   s1Label: number, s1Start: number, s1End: number,
   s2Label: number, s2Start: number, s2End: number,
   s3Label: number, s3Start: number, s3End: number,
-  filterStart: number, cohortFc: number,
-  hasAnn = false
+  filterStart: number, cohortFc: number
 ): void {
   const maxCol = s3End;
-  const blockHeight = hasAnn ? 22 : 19;
+  const blockHeight = retentionBlockHeight();
   const maxRow = 5 + filterBlocks.length * blockHeight;
 
   // Base font
@@ -300,9 +300,8 @@ export function formatRetentionTab(
     const rLostRet = start + 13;
     const rPunitRet = start + 14;
     const rNetRet = start + 15;
-    const annRows = hasAnn ? [start + 16, start + 17, start + 18] : [];
-    const rNlPct = start + (hasAnn ? 19 : 16);
-    const rNlGrowth = start + (hasAnn ? 20 : 17);
+    const rNlPct = start + 16;
+    const rNlGrowth = start + 17;
 
     // Title bold, centered across the block, underlined
     setFont(ws, rTitle, s1Label, true);
@@ -357,8 +356,8 @@ export function formatRetentionTab(
       const c = s1Start + i;
       for (const r of [rBop, rRetained, rEop]) setNumFmt(ws, r, c, NF_DOLLAR);
       for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rCheck]) setNumFmt(ws, r, c, NF_NUMBER);
-      setNumFmt(ws, rGrowth, c, NF_PCT_DEC);
-      for (const r of [rLostRet, rPunitRet, rNetRet, ...annRows, rNlPct, rNlGrowth]) setNumFmt(ws, r, c, NF_PCT_DEC);
+      setNumFmt(ws, rGrowth, c, NF_PCT);
+      for (const r of [rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) setNumFmt(ws, r, c, NF_PCT_DEC);
       for (let r = rBop; r <= rNlGrowth; r++) setAlign(ws, r, c, 'right');
     }
 
@@ -397,7 +396,7 @@ export function formatRetentionTab(
     }
 
     // Indent sub-item labels in section 1
-    for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rNetRet]) {
+    for (const r of [rChurn, rDownsell, rUpsell, rNewLogo, rGrowth, rNetRet]) {
       const cell = ws.getCell(r, s1Label);
       cell.alignment = { ...cell.alignment, indent: 1 };
     }
@@ -415,7 +414,7 @@ export function formatRetentionTab(
     }
 
     // Italicize the percentage rows across all section 1 columns
-    for (const r of [rLostRet, rPunitRet, rNetRet, ...annRows, rNlPct, rNlGrowth]) {
+    for (const r of [rGrowth, rLostRet, rPunitRet, rNetRet, rNlPct, rNlGrowth]) {
       for (let c = 1; c <= maxCol; c++) {
         const cell = ws.getCell(r, c);
         cell.font = { ...cell.font, italic: true };
