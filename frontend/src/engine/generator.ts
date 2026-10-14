@@ -435,6 +435,16 @@ function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): {
       const s = excelText(val);
       if (s) {
         const rows = customerRows.get(s) || [];
+        if (rows.length > 0) {
+          for (const [attribute, letter] of Object.entries(config.attributes)) {
+            const col = colNumFromLetter(letter);
+            const firstValue = excelText(ws.getCell(rows[0], col).value) || 'Unknown';
+            const currentValue = excelText(row.getCell(col).value) || 'Unknown';
+            if (firstValue !== currentValue) {
+              throw new Error(`Customer ID "${s}" has conflicting "${attribute}" values on rows ${rows[0]} and ${rowNumber}. Use distinct customer IDs or consistent identifiers before generating the data pack.`);
+            }
+          }
+        }
         rows.push(rowNumber);
         customerRows.set(s, rows);
       }

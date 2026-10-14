@@ -262,6 +262,13 @@ test('wide-table exports preserve source rows after invalid IDs and sum repeated
   assert.equal(computeDashboard(wb, config, 'monthly').overview.stats.total_arr, 210);
 });
 
+test('wide-table exports reject conflicting duplicate identifiers rather than misassigning segment revenue', async () => {
+  const { wb, ws, config } = fixture();
+  ws.addRow(['Downsell', 'Enterprise', ...Array(14).fill(10)]);
+  config.raw_data_last_row = ws.rowCount;
+  await assert.rejects(generateDataPack(config, wb), /Customer ID "Downsell" has conflicting "Segment" values on rows 3 and 6/);
+});
+
 for (const granularity of ['monthly', 'quarterly']) {
   test(`${granularity} Excel annualized summaries recalculate to web retention with signed credits`, () => {
     const { wb, ws, config } = fixture(granularity);
