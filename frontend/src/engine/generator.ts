@@ -54,12 +54,14 @@ export async function generateDataPack(
 
   let uniqueDates: Date[];
   let uniqueCustomers: string[];
+  let sourceCustomerRows = new Map<string, number[]>();
 
   if (isCleaned && config.date_columns && config.date_columns.length > 0) {
     // For cleaned table: dates come from header row, customers from the customer ID column
     const extracted = extractUniquesFromTable(srcWs, config);
     uniqueDates = extracted.uniqueDates;
     uniqueCustomers = extracted.uniqueCustomers;
+    sourceCustomerRows = extracted.customerRows;
   } else {
     const extracted = extractUniques(srcWs, config);
     uniqueDates = extracted.uniqueDates;
@@ -97,7 +99,7 @@ export async function generateDataPack(
   if (isCleaned && config.date_columns && config.date_columns.length > 0) {
     // Convert date column letters to 1-based column numbers
     const dateColNums = config.date_columns.map(l => colNumFromLetter(l));
-    baseResult = generateCleanDataFromTable(wb, config, uniqueDates, uniqueCustomers, dateColNums);
+    baseResult = generateCleanDataFromTable(wb, config, uniqueDates, uniqueCustomers, dateColNums, sourceCustomerRows);
   } else {
     baseResult = generateBaseCleanData(wb, config, uniqueDates, uniqueCustomers);
   }
@@ -402,7 +404,7 @@ function extractUniques(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDa
   return { uniqueDates, uniqueCustomers };
 }
 
-function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDates: Date[]; uniqueCustomers: string[] } {
+function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDates: Date[]; uniqueCustomers: string[]; customerRows: Map<string, number[]> } {
   const custColIdx = colNumFromLetter(config.customer_id_col);
   const dateColLetters = config.date_columns || [];
 
@@ -425,23 +427,21 @@ function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): {
   }
   dates.sort((a, b) => a.getTime() - b.getTime());
 
-  // Customers come from the customer ID column (rows 2+)
-  // Preserve row order — important since we use direct row references
-  const customers: string[] = [];
-  const seen = new Set<string>();
+  const customerRows = new Map<string, number[]>();
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber < config.raw_data_first_row) return;
     const val = row.getCell(custColIdx).value;
     if (val != null) {
       const s = excelText(val);
-      if (s && !seen.has(s)) {
-        seen.add(s);
-        customers.push(s);
+      if (s) {
+        const rows = customerRows.get(s) || [];
+        rows.push(rowNumber);
+        customerRows.set(s, rows);
       }
     }
   });
 
-  return { uniqueDates: dates, uniqueCustomers: customers };
+  return { uniqueDates: dates, uniqueCustomers: [...customerRows.keys()], customerRows };
 }
 
 function createControlTab(wb: ExcelJS.Workbook, config: EngineConfig): void {
