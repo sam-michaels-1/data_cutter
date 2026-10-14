@@ -10,7 +10,7 @@ let INITIAL_STATE;
 
 before(async () => {
   server = await createServer({
-    server: { middlewareMode: true, watch: null },
+    server: { middlewareMode: true, watch: null, ws: false },
     appType: 'custom',
   });
   ({ detectTableColumns } = await server.ssrLoadModule('/src/engine/detect.ts'));

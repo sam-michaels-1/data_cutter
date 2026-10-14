@@ -49,6 +49,7 @@ export function computeSummaryData(
   let rawRows = config.input_format === 'cleaned'
     ? readCleanedData(wb, config)
     : readRawData(wb, config);
+  const unfilteredRows = rawRows;
   const fyMonth = config.fiscal_year_end_month;
   const scaleFactor = config.scale_factor;
   const outputGrans = config.output_granularities;
@@ -77,7 +78,7 @@ export function computeSummaryData(
   }
   const available = ['annual', 'quarterly', 'monthly'].filter(g => outputGrans.includes(g));
 
-  const { records } = aggregateToGranularity(rawRows, targetGran, fyMonth, dataType);
+  const { records } = aggregateToGranularity(rawRows, targetGran, fyMonth, dataType, unfilteredRows);
   const { pivot, periods } = buildArrMatrix(records);
   const yoyOffset = getYoyOffset(targetGran);
   const cohortMap = buildCohortMap(pivot, periods);
