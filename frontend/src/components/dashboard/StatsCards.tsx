@@ -88,6 +88,12 @@ export default function StatsCards({ stats, scaleFactor, latestPeriodLabel, late
           );
         })}
       </div>
+      {granularity && granularity !== "annual" && (
+        <p className="text-xs text-gray-500">
+          Annualized retention extrapolates the latest {granularity === "monthly" ? "month’s" : "quarter’s"} movements
+          {" "}×{granularity === "monthly" ? 12 : 4}, relative to the prior period’s balance. It is not trailing-year retention and can be negative.
+        </p>
+      )}
     </div>
   );
 }

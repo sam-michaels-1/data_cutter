@@ -158,6 +158,21 @@ export function toLocalISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+export function excelText(value: unknown): string {
+  if (value == null) return '';
+  if (value instanceof Date) return toLocalISODate(normalizeExcelDate(value));
+  if (typeof value === 'object') {
+    if ('error' in value) return '';
+    if ('result' in value) return excelText(value.result);
+    if ('richText' in value && Array.isArray(value.richText)) {
+      return value.richText.map(part => excelText(part.text)).join('');
+    }
+    if ('text' in value) return excelText(value.text);
+    return '';
+  }
+  return String(value);
+}
+
 /** Return display label for a granularity level. */
 export function granularityLabel(granularity: string): string {
   return { monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual' }[granularity] || granularity;

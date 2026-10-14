@@ -3,7 +3,7 @@
  * Reads sheet data and infers column types, scale factor, and data frequency.
  */
 import type { Workbook } from 'exceljs';
-import { colLetter } from './utils';
+import { colLetter, excelText } from './utils';
 
 const SAMPLE_ROWS = 50;
 
@@ -244,7 +244,7 @@ function findHeaderRow(
         cells.push({
           col_num: colNumber,
           letter: colLetter(colNumber),
-          header: String(cell.value).trim(),
+          header: excelText(cell.value).trim(),
           rawValue: cell.value,
         });
       }
@@ -268,7 +268,7 @@ function findHeaderRow(
     const row = ws.getRow(r);
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       if (cell.value != null && !headerColNums.has(colNumber) && !discoveredCols.has(colNumber)) {
-        discoveredCols.set(colNumber, String(cell.value).trim());
+        discoveredCols.set(colNumber, excelText(cell.value).trim());
       }
     });
   }
@@ -373,7 +373,7 @@ export function detectColumns(wb: Workbook, sheetName: string): DetectResult {
 
     let uniqueCount: number;
     try {
-      uniqueCount = new Set(nonNone.map(v => String(v))).size;
+      uniqueCount = new Set(nonNone.map(excelText).filter(Boolean)).size;
     } catch {
       uniqueCount = nonNone.length;
     }
@@ -483,7 +483,7 @@ export function detectColumns(wb: Workbook, sheetName: string): DetectResult {
 
   // Build column info for the frontend
   const columnInfo: ColumnInfo[] = headers.map(h => {
-    const samples = (colSamples[h.col_num] || []).slice(0, 5).filter(v => v != null).map(v => String(v));
+    const samples = (colSamples[h.col_num] || []).map(excelText).filter(Boolean).slice(0, 5);
     return { letter: h.letter, header: h.header, sample_values: samples };
   });
 
@@ -564,7 +564,7 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
       row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
         if (cell.value == null) return;
         const letter = colLetter(colNumber);
-        const headerText = String(cell.value).trim();
+        const headerText = excelText(cell.value).trim();
 
         // Check if cell is a Date object
         if (cell.value instanceof Date && !isNaN(cell.value.getTime())) {
@@ -652,13 +652,13 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
   // Classify non-date columns
   const colStats: Record<number, { str_ratio: number; unique_count: number }> = {};
   for (const h of nonDateCols) {
-    const vals = colSamples[h.col_num].filter(v => v != null);
+    const vals = colSamples[h.col_num].filter(v => excelText(v) !== '');
     if (vals.length === 0) {
       colStats[h.col_num] = { str_ratio: 0, unique_count: 0 };
       continue;
     }
     const strCount = vals.filter(v => typeof v === 'string').length;
-    const uniqueCount = new Set(vals.map(v => String(v))).size;
+    const uniqueCount = new Set(vals.map(excelText)).size;
     colStats[h.col_num] = { str_ratio: strCount / vals.length, unique_count: uniqueCount };
   }
 
@@ -719,7 +719,7 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
   const columnInfo: ColumnInfo[] = headers.map(h => {
     const samples: string[] = [];
     if (colSamples[h.col_num]) {
-      samples.push(...colSamples[h.col_num].filter(v => v != null && String(v).trim() !== '').slice(0, 5).map(v => String(v)));
+      samples.push(...colSamples[h.col_num].map(excelText).filter(v => v.trim() !== '').slice(0, 5));
     }
     const recoveredHeader = nonDateCols.find(col => col.letter === h.letter)?.header;
     return { letter: h.letter, header: recoveredHeader || h.header, sample_values: samples };

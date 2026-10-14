@@ -8,6 +8,11 @@ export interface WaterfallData {
   eop: number;
 }
 
+export interface AnnualizedWaterfallData extends WaterfallData {
+  prior_period_label: string;
+  annualization_factor: number;
+}
+
 export interface StatsData {
   total_arr: number;
   customer_count: number;
@@ -37,6 +42,7 @@ export interface OverviewData {
   arr_over_time: number[];
   arr_growth_pcts: (number | null)[];
   waterfall: WaterfallData | null;
+  annualized_waterfall: AnnualizedWaterfallData | null;
   stats: StatsData;
   top_customers: TopCustomer[];
   latest_period_label: string;

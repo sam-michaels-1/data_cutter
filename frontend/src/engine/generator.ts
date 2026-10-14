@@ -4,7 +4,7 @@
  */
 import ExcelJS from 'exceljs';
 import type { EngineConfig, FilterBlock, CleanTabResult } from './types';
-import { getYoyOffset, normalizeExcelDate, colLetter } from './utils';
+import { getYoyOffset, normalizeExcelDate, colLetter, excelText } from './utils';
 import { parseHeaderDate } from './detect';
 import { generateBaseCleanData, generateAggregatedCleanData, generateCleanDataFromTable, generatePeriodOverPeriodCleanData } from './clean_data';
 import { generateRetentionTab, type RetentionTabOptions } from './retention';
@@ -390,7 +390,8 @@ function extractUniques(ws: ExcelJS.Worksheet, config: EngineConfig): { uniqueDa
       }
     }
     if (custVal != null) {
-      customers.add(String(custVal));
+      const customerId = excelText(custVal);
+      if (customerId) customers.add(customerId);
     }
   });
 
@@ -416,7 +417,7 @@ function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): {
     if (val instanceof Date) {
       dates.push(normalizeExcelDate(val));
     } else if (val != null) {
-      const parsed = parseHeaderDate(String(val));
+      const parsed = parseHeaderDate(excelText(val));
       if (parsed) {
         dates.push(parsed);
       }
@@ -432,8 +433,8 @@ function extractUniquesFromTable(ws: ExcelJS.Worksheet, config: EngineConfig): {
     if (rowNumber < config.raw_data_first_row) return;
     const val = row.getCell(custColIdx).value;
     if (val != null) {
-      const s = String(val);
-      if (!seen.has(s)) {
+      const s = excelText(val);
+      if (s && !seen.has(s)) {
         seen.add(s);
         customers.push(s);
       }
@@ -518,11 +519,11 @@ function distinctColumnValues(ws: ExcelJS.Worksheet, config: EngineConfig, colLe
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber < config.raw_data_first_row) return;
     const val = row.getCell(colIdx).value;
-    if (val == null || val === '') {
+    const s = excelText(val);
+    if (!s) {
       hasBlank = true;
       return;
     }
-    const s = String(val);
     if (s !== '') values.add(s);
   });
   if (hasBlank) values.add('Unknown');
