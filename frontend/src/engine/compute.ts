@@ -133,41 +133,40 @@ export function assignFiscalPeriod(date: Date, fyMonth: number): { year: number;
 }
 
 export function aggregateToGranularity(
-  rawRows: RawRecord[], granularity: string, fyMonth: number, dataType: string
+  rawRows: RawRecord[], granularity: string, fyMonth: number, dataType: string,
+  unfilteredRows: RawRecord[] = rawRows
 ): { records: AggRecord[]; periodDateMap: Record<string, string> } {
   const records: AggRecord[] = [];
   const periodDateMap: Record<string, string> = {};
 
   if (granularity === 'annual') {
+    // Completion depends on source coverage, not a customer's last activity.
+    const yearEndDates = new Map<number, Date>();
+    for (const row of unfilteredRows) {
+      if (row.date.getMonth() + 1 !== fyMonth) continue;
+      const { year } = assignFiscalPeriod(row.date, fyMonth);
+      const existing = yearEndDates.get(year);
+      if (!existing || row.date > existing) yearEndDates.set(year, row.date);
+    }
+
     // Group by customer_id + fy_year
-    const groups = new Map<string, { arr: number; maxDate: Date }>();
+    const groups = new Map<string, number>();
     for (const row of rawRows) {
       const { year } = assignFiscalPeriod(row.date, fyMonth);
+      if (!yearEndDates.has(year)) continue;
       const isAtFyEnd = row.date.getMonth() + 1 === fyMonth;
       if (dataType !== 'revenue' && !isAtFyEnd) continue;
 
       const key = `${row.customer_id}|${year}`;
-      const existing = groups.get(key);
-      if (existing) {
-        existing.arr += row.arr;
-        if (row.date > existing.maxDate) existing.maxDate = row.date;
-      } else {
-        groups.set(key, { arr: row.arr, maxDate: row.date });
-      }
+      groups.set(key, (groups.get(key) || 0) + row.arr);
     }
 
-    const periodMaxDates = new Map<string, Date>();
-    for (const [key, val] of groups) {
+    for (const [key, arr] of groups) {
       const [custId, yearStr] = key.split('|');
       const year = parseInt(yearStr);
       const label = `FY'${(year % 100).toString().padStart(2, '0')}`;
-      records.push({ customer_id: custId, period_label: label, period_sort: year, arr: val.arr });
-
-      const existing = periodMaxDates.get(label);
-      if (!existing || val.maxDate > existing) periodMaxDates.set(label, val.maxDate);
-    }
-    for (const [label, date] of periodMaxDates) {
-      periodDateMap[label] = toLocalISODate(date);
+      records.push({ customer_id: custId, period_label: label, period_sort: year, arr });
+      periodDateMap[label] = toLocalISODate(yearEndDates.get(year)!);
     }
 
   } else if (granularity === 'quarterly') {
@@ -441,6 +440,7 @@ export function computeDashboard(
   let rawRows = config.input_format === 'cleaned'
     ? readCleanedData(wb, config)
     : readRawData(wb, config);
+  const unfilteredRows = rawRows;
   const fyMonth = config.fiscal_year_end_month;
   const scaleFactor = config.scale_factor;
   const outputGrans = config.output_granularities;
@@ -472,7 +472,7 @@ export function computeDashboard(
 
   const available = ['annual', 'quarterly', 'monthly'].filter(g => outputGrans.includes(g));
 
-  const { records, periodDateMap } = aggregateToGranularity(rawRows, targetGran, fyMonth, dataType);
+  const { records, periodDateMap } = aggregateToGranularity(rawRows, targetGran, fyMonth, dataType, unfilteredRows);
   const { pivot, periods } = buildArrMatrix(records);
   const yoyOffset = getYoyOffset(targetGran);
   const cohortMap = buildCohortMap(pivot, periods);

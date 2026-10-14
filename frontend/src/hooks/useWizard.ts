@@ -13,7 +13,7 @@ import type {
 } from "../types/wizard";
 import { loadWizardState, saveWizardState } from "../api/storage";
 
-const INITIAL_STATE: WizardState = {
+export const INITIAL_STATE: WizardState = {
   currentStep: 1,
   sessionId: null,
   filename: null,
@@ -114,7 +114,25 @@ function granularitiesForFrequency(freq: DataFrequency | null): Granularity[] {
   return [];
 }
 
-function reducer(state: WizardState, action: Action): WizardState {
+function updateColumnRoles(state: WizardState, excludedColumns: string[]): WizardState {
+  const detectedLetters = new Set(state.detectedAttributes.map((attr) => attr.letter));
+  const detectedAttributes = state.columns
+    .filter((col) =>
+      !excludedColumns.includes(col.letter) &&
+      (detectedLetters.has(col.letter) || col.sample_values.some((value) => value.trim() !== ""))
+    )
+    .map(({ header, letter }) => ({ header, letter }));
+  const availableLetters = new Set(detectedAttributes.map((attr) => attr.letter));
+  return {
+    ...state,
+    detectedAttributes,
+    selectedAttributes: state.selectedAttributes.filter((attr) =>
+      availableLetters.has(attr.letter)
+    ),
+  };
+}
+
+export function wizardReducer(state: WizardState, action: Action): WizardState {
   switch (action.type) {
     case "SET_STEP":
       return { ...state, currentStep: action.step, error: null };
@@ -140,6 +158,7 @@ function reducer(state: WizardState, action: Action): WizardState {
         detectedMapping: null,
         confirmedMapping: null,
         detectedAttributes: [],
+        selectedAttributes: [],
         dateColumns: [],
         customerNameCol: null,
         fiscalLabeled: false,
@@ -163,6 +182,7 @@ function reducer(state: WizardState, action: Action): WizardState {
           arr_col: action.mapping.arr_col,
         },
         detectedAttributes: action.attributes,
+        selectedAttributes: [],
         scaleFactor: action.scaleFactor,
         rowCount: action.rowCount,
         detectedFrequency: freq,
@@ -181,6 +201,7 @@ function reducer(state: WizardState, action: Action): WizardState {
         dateColumns: action.dateColumns,
         customerNameCol: action.customerNameCol,
         detectedAttributes: action.attributes,
+        selectedAttributes: [],
         scaleFactor: action.scaleFactor,
         rowCount: action.rowCount,
         detectedFrequency: freq,
@@ -197,10 +218,16 @@ function reducer(state: WizardState, action: Action): WizardState {
     }
 
     case "SET_CONFIRMED_MAPPING":
-      return { ...state, confirmedMapping: action.mapping };
+      return updateColumnRoles(
+        { ...state, confirmedMapping: action.mapping },
+        [action.mapping.date_col, action.mapping.customer_id_col, action.mapping.arr_col]
+      );
 
     case "SET_CUSTOMER_NAME_COL":
-      return { ...state, customerNameCol: action.col };
+      return updateColumnRoles(
+        { ...state, customerNameCol: action.col },
+        [...state.dateColumns, action.col]
+      );
 
     case "SET_DATA_FREQUENCY":
       return {
@@ -309,7 +336,7 @@ function reducer(state: WizardState, action: Action): WizardState {
 }
 
 export function useWizard() {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE, (initial) => {
+  const [state, dispatch] = useReducer(wizardReducer, INITIAL_STATE, (initial) => {
     const saved = loadWizardState();
     // In-flight flags don't survive a refresh — no async op resumes to clear
     // them, so hydration always resets them to idle.
