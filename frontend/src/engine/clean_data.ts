@@ -227,10 +227,10 @@ export function generateBaseCleanData(
         formula: `IF(AND(${currRef}=0,${priorRef}>0),-${priorRef},0)`
       };
       ws.getCell(row, layout.downsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${currRef}<>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.upsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${priorRef}<>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.new_biz_start + i).value = {
         formula: `IF(AND(${currRef}>0,${priorRef}=0),${currRef},0)`
@@ -422,10 +422,10 @@ export function generateAggregatedCleanData(
         formula: `IF(AND(${currRef}=0,${priorRef}>0),-${priorRef},0)`
       };
       ws.getCell(row, layout.downsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${currRef}<>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.upsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${priorRef}<>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.new_biz_start + i).value = {
         formula: `IF(AND(${currRef}>0,${priorRef}=0),${currRef},0)`
@@ -647,10 +647,10 @@ export function generateCleanDataFromTable(
         formula: `IF(AND(${currRef}=0,${priorRef}>0),-${priorRef},0)`
       };
       ws.getCell(row, layout.downsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${currRef}<>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.upsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${priorRef}<>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.new_biz_start + i).value = {
         formula: `IF(AND(${currRef}>0,${priorRef}=0),${currRef},0)`
@@ -763,10 +763,10 @@ export function generatePeriodOverPeriodCleanData(
         formula: `IF(AND(${currRef}=0,${priorRef}>0),-${priorRef},0)`
       };
       ws.getCell(row, layout.downsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${currRef}<>0,${currRef}<${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.upsell_start + i).value = {
-        formula: `IF(AND(${currRef}>0,${priorRef}>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
+        formula: `IF(AND(${priorRef}<>0,${currRef}>${priorRef}),${currRef}-${priorRef},0)`
       };
       ws.getCell(row, layout.new_biz_start + i).value = {
         formula: `IF(AND(${currRef}>0,${priorRef}=0),${currRef},0)`

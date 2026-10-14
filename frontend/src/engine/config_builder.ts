@@ -3,7 +3,7 @@
  */
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
-import { colNum } from './utils';
+import { colNum, excelText } from './utils';
 
 /**
  * Auto-detect the raw data frequency by examining date intervals.
@@ -54,8 +54,7 @@ function getUniqueValues(wb: Workbook, sheetName: string, colLetterStr: string, 
     if (rowNumber <= headerRow) return;
     if (values.size >= maxUnique) return;
     const val = row.getCell(colIdx).value;
-    if (val == null || val === '') return;
-    const valStr = String(val);
+    const valStr = excelText(val) || 'Unknown';
     if (valStr !== '') values.add(valStr);
   });
 

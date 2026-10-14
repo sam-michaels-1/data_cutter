@@ -4,8 +4,9 @@
  */
 import type { Workbook } from 'exceljs';
 import type { EngineConfig } from './types';
+import type { AnnualizedWaterfallData, WaterfallData } from '../types/dashboard';
 import { parseHeaderDate } from './detect';
-import { normalizeExcelDate, toLocalISODate } from './utils';
+import { excelText, normalizeExcelDate, toLocalISODate } from './utils';
 
 function colNumFromLetter(letter: string): number {
   let result = 0;
@@ -52,11 +53,13 @@ export function readRawData(wb: Workbook, config: EngineConfig): RawRecord[] {
     if (!(dateVal instanceof Date)) return;
 
     const arr = typeof arrVal === 'number' ? arrVal : (arrVal ? parseFloat(String(arrVal)) || 0 : 0);
-    const record: RawRecord = { date: normalizeExcelDate(dateVal as Date), customer_id: String(custVal), arr };
+    const customerId = excelText(custVal);
+    if (!customerId) return;
+    const record: RawRecord = { date: normalizeExcelDate(dateVal as Date), customer_id: customerId, arr };
 
     for (const [name, colIdx] of Object.entries(attrCols)) {
       const val = row.getCell(colIdx).value;
-      record[name] = val != null && val !== '' ? String(val) : '';
+      record[name] = excelText(val) || 'Unknown';
     }
 
     rows.push(record);
@@ -89,7 +92,7 @@ export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[]
     if (val instanceof Date) {
       date = normalizeExcelDate(val);
     } else if (val != null) {
-      date = parseHeaderDate(String(val));
+      date = parseHeaderDate(excelText(val));
     }
     if (date) {
       dateColInfo.push({ colNum, date });
@@ -107,7 +110,8 @@ export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[]
     if (rowNumber < config.raw_data_first_row) return;
     const custVal = row.getCell(custIdx).value;
     if (custVal == null) return;
-    const customerId = String(custVal);
+    const customerId = excelText(custVal);
+    if (!customerId) return;
 
     for (const { colNum, date } of dateColInfo) {
       const arrVal = row.getCell(colNum).value;
@@ -116,7 +120,7 @@ export function readCleanedData(wb: Workbook, config: EngineConfig): RawRecord[]
       const record: RawRecord = { date, customer_id: customerId, arr };
       for (const [name, colIdx] of Object.entries(attrCols)) {
         const val = row.getCell(colIdx).value;
-        record[name] = val != null && val !== '' ? String(val) : '';
+        record[name] = excelText(val) || 'Unknown';
       }
       rows.push(record);
     }
@@ -311,8 +315,8 @@ export function computeDerived(pivot: Map<string, Map<string, number>>, periods:
       const curr = getPivotValue(pivot, cust, currPeriod);
 
       churnMap.set(currPeriod, (curr === 0 && prior > 0) ? -prior : 0);
-      dsMap.set(currPeriod, (curr > 0 && prior > 0 && curr < prior) ? curr - prior : 0);
-      upMap.set(currPeriod, (curr > 0 && prior > 0 && curr > prior) ? curr - prior : 0);
+      dsMap.set(currPeriod, (curr !== 0 && curr < prior) ? curr - prior : 0);
+      upMap.set(currPeriod, (prior !== 0 && curr > prior) ? curr - prior : 0);
       nbMap.set(currPeriod, (curr > 0 && prior === 0) ? curr : 0);
     }
 
@@ -378,15 +382,8 @@ export interface DashboardResult {
     periods: string[];
     arr_over_time: number[];
     arr_growth_pcts: (number | null)[];
-    waterfall: {
-      period_label: string;
-      bop: number;
-      new_logo: number;
-      upsell: number;
-      downsell: number;
-      churn: number;
-      eop: number;
-    } | null;
+    waterfall: WaterfallData | null;
+    annualized_waterfall: AnnualizedWaterfallData | null;
     stats: {
       total_arr: number;
       customer_count: number;
@@ -522,6 +519,7 @@ export function computeDashboard(
   const derivedPeriods = periods.slice(yoyOffset);
 
   let waterfall = null;
+  let annualizedWaterfall: AnnualizedWaterfallData | null = null;
   let stats = {
     total_arr: arrOverTime[arrOverTime.length - 1] || 0,
     customer_count: 0,
@@ -589,6 +587,19 @@ export function computeDashboard(
     const pChurn = sumDerivedPeriod(popDerived.churn, last);
     const pDown = sumDerivedPeriod(popDerived.downsell, last);
     const pUp = sumDerivedPeriod(popDerived.upsell, last);
+    const pNew = sumDerivedPeriod(popDerived.new_biz, last);
+
+    annualizedWaterfall = {
+      period_label: last,
+      prior_period_label: prev,
+      annualization_factor: yoyOffset,
+      bop: Math.round(prevBop * 100) / 100 / sf,
+      churn: Math.round(yoyOffset * pChurn * 100) / 100 / sf,
+      downsell: Math.round(yoyOffset * pDown * 100) / 100 / sf,
+      upsell: Math.round(yoyOffset * pUp * 100) / 100 / sf,
+      new_logo: Math.round(yoyOffset * pNew * 100) / 100 / sf,
+      eop: Math.round((prevBop + yoyOffset * (pChurn + pDown + pUp + pNew)) * 100) / 100 / sf,
+    };
 
     if (prevBop !== 0) {
       stats.annualized_lost_only_retention_pct = Math.round(((prevBop + yoyOffset * pChurn) / prevBop) * 10000) / 10000;
@@ -701,6 +712,7 @@ export function computeDashboard(
       arr_over_time: arrOverTime,
       arr_growth_pcts: arrGrowthPcts,
       waterfall,
+      annualized_waterfall: annualizedWaterfall,
       stats,
       top_customers: topCustomers,
       latest_period_label: latestPeriodLabel,

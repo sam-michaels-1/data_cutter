@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -8,12 +9,14 @@ import {
   Cell,
   LabelList,
 } from "recharts";
-import type { WaterfallData } from "../../types/dashboard";
+import type { AnnualizedWaterfallData, WaterfallData } from "../../types/dashboard";
 import { formatCurrency } from "../../utils/format";
 
 interface Props {
-  waterfall: WaterfallData;
+  waterfall: WaterfallData | null;
+  annualizedWaterfall: AnnualizedWaterfallData | null;
   scaleFactor: number;
+  granularity: string;
 }
 
 interface WaterfallEntry {
@@ -23,8 +26,12 @@ interface WaterfallEntry {
   value: number;
 }
 
-export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
-  const { bop, new_logo, upsell, downsell, churn, eop } = waterfall;
+export default function WaterfallChart({ waterfall, annualizedWaterfall, scaleFactor, granularity }: Props) {
+  const [mode, setMode] = useState<"lookback" | "annualized">("lookback");
+  const isAnnualized = !!annualizedWaterfall && (mode === "annualized" || !waterfall);
+  const displayed = isAnnualized ? annualizedWaterfall : waterfall;
+  if (!displayed) return null;
+  const { bop, new_logo, upsell, downsell, churn, eop } = displayed;
 
   // Order: BoP → Churn → Downsell → Upsell → New → EoP
   let running = bop;
@@ -51,7 +58,7 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
     { name: "Downsell", range: [downsellBottom, downsellTop], type: "negative", value: downsell },
     { name: "Upsell", range: [upsellBottom, upsellTop], type: "positive", value: upsell },
     { name: "New", range: [newBottom, newTop], type: "positive", value: new_logo },
-    { name: "EoP", range: [0, eop], type: "total", value: eop },
+    { name: isAnnualized ? "Projected EoP" : "EoP", range: [Math.min(0, eop), Math.max(0, eop)], type: "total", value: eop },
   ];
 
   const colors: Record<string, string> = {
@@ -137,12 +144,46 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-3">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
-        Latest Period Waterfall
-        <span className="ml-2 text-xs font-normal text-gray-500">
-          ({waterfall.period_label})
-        </span>
-      </h3>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+          Latest Period Waterfall
+          <span className="ml-2 text-xs font-normal text-gray-500">
+            ({displayed.period_label})
+          </span>
+        </h3>
+        {granularity !== "annual" && (
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5" role="group" aria-label="Waterfall comparison">
+            <button
+              type="button"
+              onClick={() => setMode("lookback")}
+              disabled={!waterfall}
+              aria-pressed={!isAnnualized}
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                !isAnnualized ? "bg-white text-teal-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              12-month lookback
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("annualized")}
+              disabled={!annualizedWaterfall}
+              aria-pressed={isAnnualized}
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                isAnnualized ? "bg-white text-teal-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Annualized (×{granularity === "monthly" ? 12 : 4})
+            </button>
+          </div>
+        )}
+      </div>
+      {isAnnualized && annualizedWaterfall && (
+        <p className="text-xs text-gray-500 mb-1">
+          {annualizedWaterfall.prior_period_label} → {annualizedWaterfall.period_label} movements ×{annualizedWaterfall.annualization_factor}.
+          {" "}BoP is unchanged; projected EoP is an illustration, not actual revenue or a forecast.
+        </p>
+      )}
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 20, right: 20, bottom: 5, left: 10 }}>
           <XAxis
@@ -158,10 +199,7 @@ export default function WaterfallChart({ waterfall, scaleFactor }: Props) {
             tickLine={false}
           />
           <Tooltip
-            formatter={(value: any) => {
-              const diff = Math.round((value[1] - value[0]) * 10) / 10;
-              return [formatCurrency(Math.abs(diff), scaleFactor), "Amount"];
-            }}
+            formatter={(_value, _name, item) => [formatCurrency(item.payload.value, scaleFactor), "Amount"]}
             contentStyle={{
               backgroundColor: "#ffffff",
               border: "1px solid #E5E7EB",

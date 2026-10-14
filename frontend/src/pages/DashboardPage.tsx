@@ -145,8 +145,14 @@ export default function DashboardPage() {
           scaleFactor={scale_factor}
           metricLabel={metricLabel}
         />
-        {overview.waterfall && (
-          <WaterfallChart waterfall={overview.waterfall} scaleFactor={scale_factor} />
+        {(overview.waterfall || overview.annualized_waterfall) && (
+          <WaterfallChart
+            key={granularity}
+            waterfall={overview.waterfall}
+            annualizedWaterfall={overview.annualized_waterfall}
+            scaleFactor={scale_factor}
+            granularity={granularity}
+          />
         )}
       </div>
 
