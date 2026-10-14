@@ -185,9 +185,9 @@ export function generateSummaryTab(
             const currRng = R(cleanLayout.arr_start + periodIdx);
             const mask = `((${CRIT}=${crit})+(${crit}="<>")*(${CRIT}<>""))`;
             const chPop = `SUMPRODUCT((${prevRng}>0)*(${currRng}=0)*(-${prevRng})*${mask})`;
-            const dnPop = `SUMPRODUCT((${prevRng}>0)*(${currRng}>0)*(${currRng}<${prevRng})*(${currRng}-${prevRng})*${mask})`;
+            const dnPop = `SUMPRODUCT((${currRng}<>0)*(${currRng}<${prevRng})*(${currRng}-${prevRng})*${mask})`;
             const upPop = section.key === 'ann_net'
-              ? `+SUMPRODUCT((${prevRng}>0)*(${currRng}>${prevRng})*(${currRng}-${prevRng})*${mask})`
+              ? `+SUMPRODUCT((${prevRng}<>0)*(${currRng}>${prevRng})*(${currRng}-${prevRng})*${mask})`
               : '';
             const segPrev = sum(cleanLayout.arr_start + periodIdx - 1);
             formula = `IFERROR((${segPrev}+${yoyOffset}*(${chPop}+${dnPop}${upPop}))/${segPrev},"n.a.")`;

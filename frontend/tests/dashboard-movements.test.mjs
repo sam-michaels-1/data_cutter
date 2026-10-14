@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import ExcelJS from 'exceljs';
+import { HyperFormula } from 'hyperformula';
 import { createServer } from 'vite';
 
 let server;
@@ -14,6 +15,9 @@ let detectTableColumns;
 let excelText;
 let colLetter;
 let generateDataPack;
+let generateSummaryTab;
+let computeSummarySections;
+let computeCleanLayout;
 
 before(async () => {
   server = await createServer({
@@ -24,8 +28,9 @@ before(async () => {
   ({ computeSummaryData } = await server.ssrLoadModule('/src/engine/summary_compute.ts'));
   ({ buildEngineConfig } = await server.ssrLoadModule('/src/engine/config_builder.ts'));
   ({ detectTableColumns } = await server.ssrLoadModule('/src/engine/detect.ts'));
-  ({ excelText, colLetter } = await server.ssrLoadModule('/src/engine/utils.ts'));
+  ({ excelText, colLetter, computeCleanLayout } = await server.ssrLoadModule('/src/engine/utils.ts'));
   ({ generateDataPack } = await server.ssrLoadModule('/src/engine/generator.ts'));
+  ({ generateSummaryTab, computeSummarySections } = await server.ssrLoadModule('/src/engine/summary.ts'));
 });
 
 after(async () => {
@@ -232,3 +237,94 @@ test('Excel clean tabs use the same signed-movement conditions for raw and clean
     }
   }
 });
+
+test('wide-table exports preserve source rows after invalid IDs and sum repeated customer rows', async () => {
+  const { wb, ws, config } = fixture();
+  const amounts = Array(14).fill(300);
+  ws.insertRows(3, [
+    [null, 'SMB', ...amounts],
+    [{ error: '#N/A' }, 'SMB', ...amounts],
+    [{ formula: 'NA()', result: { error: '#N/A' } }, 'SMB', ...amounts],
+  ]);
+  ws.addRow(['Downsell', 'SMB', ...Array(14).fill(10)]);
+  config.raw_data_last_row = ws.rowCount;
+  const output = await generateDataPack(config, wb);
+  const clean = output.getWorksheet('Clean Monthly Data');
+  const layout = computeCleanLayout(1, 14, 12);
+  assert.equal(clean.getCell(7, layout.cust_id).value.formula, "'Customers'!A2");
+  assert.equal(clean.getCell(8, layout.cust_id).value.formula, "'Customers'!A6");
+  assert.equal(clean.getCell(9, layout.cust_id).value.formula, "'Customers'!A7");
+  assert.equal(clean.getCell(10, layout.cust_id).value.formula, "'Customers'!A8");
+  assert.equal(clean.getCell(8, layout.arr_start).value.formula, "'Customers'!C6+'Customers'!C9");
+  assert.equal(clean.getCell(8, layout.arr_end).value.formula, "'Customers'!P6+'Customers'!P9");
+  assert.equal(clean.getCell(9, layout.arr_end).value.formula, "'Customers'!P7");
+  assert.match(clean.getCell(8, layout.attr_start).value.formula, /B6/);
+  assert.equal(computeDashboard(wb, config, 'monthly').overview.stats.total_arr, 210);
+});
+
+test('wide-table exports reject conflicting duplicate identifiers rather than misassigning segment revenue', async () => {
+  const { wb, ws, config } = fixture();
+  ws.addRow(['Downsell', 'Enterprise', ...Array(14).fill(10)]);
+  config.raw_data_last_row = ws.rowCount;
+  await assert.rejects(generateDataPack(config, wb), /Customer ID "Downsell" has conflicting "Segment" values on rows 3 and 6/);
+});
+
+for (const granularity of ['monthly', 'quarterly']) {
+  test(`${granularity} Excel annualized summaries recalculate to web retention with signed credits`, () => {
+    const { wb, ws, config } = fixture(granularity);
+    const balances = [
+      ['Refund', 10, -5, 'SMB'],
+      ['Recovery', -5, 0, 'SMB'],
+      ['New Credit', 0, -2, 'SMB'],
+      ['Back to Positive', -5, 10, 'Enterprise'],
+      ['Downsell', 30, 25, 'Enterprise'],
+    ];
+    for (let i = 0; i < balances.length; i++) {
+      const [name, prior, current, segment] = balances[i];
+      ws.getRow(i + 2).values = [name, segment, ...config.date_columns.map((_, p) => p === config.date_columns.length - 1 ? current : prior)];
+    }
+    config.raw_data_last_row = ws.rowCount;
+    const numDates = config.date_columns.length;
+    const factor = granularity === 'monthly' ? 12 : 4;
+    const layout = computeCleanLayout(1, numDates, factor);
+    const cleanName = `Clean ${granularity === 'monthly' ? 'Monthly' : 'Quarterly'} Data`;
+    const clean = wb.addWorksheet(cleanName);
+    clean.getCell(6, layout.attr_start).value = 'Segment';
+    clean.getCell(6, layout.cohort).value = 'Cohort';
+    balances.forEach(([name, prior, current, segment], i) => {
+      clean.getCell(7 + i, layout.cust_id).value = name;
+      clean.getCell(7 + i, layout.attr_start).value = segment;
+      for (let p = 0; p < numDates; p++) clean.getCell(7 + i, layout.arr_start + p).value = p === numDates - 1 ? current : prior;
+    });
+    const control = wb.addWorksheet('Control');
+    control.getCell('C4').value = 1;
+    const summaryName = generateSummaryTab(wb, config, cleanName, layout, 7, 11, granularity, 'Segment', ['SMB', 'Enterprise']);
+    // HyperFormula cannot evaluate INDEX(range,0,MATCH(...)) as a criteria column.
+    // Resolve that selector only; preserve the generated retention formulas.
+    const selector = `INDEX('${cleanName}'!$C$7:$D$11,0,MATCH($B$5,'${cleanName}'!$C$6:$D$6,0))`;
+    const criteria = `'${cleanName}'!$C$7:$C$11`;
+    const sheets = {};
+    for (const sheet of [clean, control, wb.getWorksheet(summaryName)]) {
+      sheets[sheet.name] = Array.from({ length: sheet.rowCount }, (_, r) =>
+        Array.from({ length: sheet.columnCount }, (_, c) => {
+          const value = sheet.getCell(r + 1, c + 1).value;
+          return value?.formula ? `=${value.formula.replaceAll(selector, criteria)}` : value ?? null;
+        }));
+    }
+    const hf = HyperFormula.buildFromSheets(sheets, { licenseKey: 'gpl-v3', useArrayArithmetic: true });
+    try {
+      const sections = computeSummarySections(numDates, layout.num_derived);
+      const web = computeSummaryData(wb, config, granularity, undefined, 'Segment');
+      for (const key of ['ann_gross', 'ann_net']) {
+        const excelSection = sections.find(section => section.key === key);
+        const webRow = web.sections.find(section => section.key === key).rows.at(-1);
+        for (const [segment, column] of [['All', 4], ['SMB', 5], ['Enterprise', 6]]) {
+          const actual = hf.getCellValue({ sheet: hf.getSheetId(summaryName), row: excelSection.startRow + excelSection.numRows - 2, col: column - 1 });
+          const expected = webRow.values[web.columns.indexOf(segment)];
+          assert.equal(typeof actual, 'number', `${key} / ${segment}: ${JSON.stringify(actual)}`);
+          assert.ok(Math.abs(actual - expected) < 1e-9, `${key} / ${segment}: Excel ${actual} vs web ${expected}`);
+        }
+      }
+    } finally { hf.destroy(); }
+  });
+}

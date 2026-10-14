@@ -444,7 +444,7 @@ export function generateAggregatedCleanData(
 export function generateCleanDataFromTable(
   wb: Workbook, config: EngineConfig,
   uniqueDates: Date[], uniqueCustomers: string[],
-  sourceDateColNums: number[]
+  sourceDateColNums: number[], sourceCustomerRows: Map<string, number[]>
 ): CleanTabResult {
   const granularity = config.time_granularity;
   const sheetName = `Clean ${granularity.charAt(0).toUpperCase() + granularity.slice(1)} Data`;
@@ -463,9 +463,6 @@ export function generateCleanDataFromTable(
   const layout = computeCleanLayout(numAttrs, numDates, yoyOffset);
   const firstDataRow = 7;
   const lastDataRow = firstDataRow + numCustomers - 1;
-
-  // Source data starts at row 2 (row 1 is headers)
-  const srcFirstDataRow = config.raw_data_first_row;
 
   // --- Row 1: Fiscal month end + column totals ---
   ws.getCell(1, 1).value = 'Fiscal Month End:';
@@ -603,7 +600,8 @@ export function generateCleanDataFromTable(
 
   for (let idx = 0; idx < uniqueCustomers.length; idx++) {
     const row = firstDataRow + idx;
-    const srcRow = srcFirstDataRow + idx;
+    const srcRows = sourceCustomerRows.get(uniqueCustomers[idx])!;
+    const srcRow = srcRows[0];
 
     // Column B: Customer ID — reference source sheet
     ws.getCell(row, layout.cust_id).value = {
@@ -628,11 +626,11 @@ export function generateCleanDataFromTable(
       formula: `RANK(${arrEndCl}${row},$${arrEndCl}$${firstDataRow}:$${arrEndCl}$${lastDataRow})`
     };
 
-    // ARR values — direct cell reference to source table
+    // Duplicate customer rows contribute to the same balance.
     for (let i = 0; i < numDates; i++) {
       const srcDateColLetter = colLetter(sourceDateColNums[i]);
       ws.getCell(row, layout.arr_start + i).value = {
-        formula: `'${srcSheet}'!${srcDateColLetter}${srcRow}`
+        formula: srcRows.map(r => `'${srcSheet}'!${srcDateColLetter}${r}`).join('+')
       };
     }
 
