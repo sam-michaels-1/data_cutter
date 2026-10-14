@@ -73,6 +73,18 @@ test('text customer IDs continue to be detected', () => {
   assert.deepEqual(result.attribute_cols.map((attr) => attr.letter), ['C', 'D']);
 });
 
+test('unique numeric measurements do not displace equally unique customer names', () => {
+  const wb = customerCube({ numericIds: false });
+  const ws = wb.getWorksheet('Customers');
+  ws.getCell('A1').value = 'Measurement';
+  ws.getCell('B1').value = 'Customer Name';
+  for (let r = 2; r <= 51; r++) {
+    ws.getCell(r, 2).value = ws.getCell(r, 1).value;
+    ws.getCell(r, 1).value = r * 10;
+  }
+  assert.equal(detectTableColumns(wb, 'Customers').customer_id_col, 'B');
+});
+
 test('correcting a mistaken customer column restores Segment as an identifier', () => {
   let state = detectedState();
   state = wizardReducer(state, { type: 'SET_CUSTOMER_NAME_COL', col: 'C' });
@@ -96,10 +108,29 @@ test('remapping removes the new customer column from selections and preserves ot
 });
 
 test('remapping preserves detected identifiers populated after the displayed sample rows', () => {
-  const state = detectedState();
-  state.columns = state.columns.map((col) => col.letter === 'D' ? { ...col, sample_values: [] } : col);
-  const remapped = wizardReducer(state, { type: 'SET_CUSTOMER_NAME_COL', col: 'A' });
-  assert.deepEqual(remapped.detectedAttributes.map((attr) => attr.letter), ['C', 'D']);
+  const wb = customerCube();
+  const ws = wb.getWorksheet('Customers');
+  for (let r = 2; r <= 6; r++) ws.getCell(r, 4).value = null;
+  const result = detectTableColumns(wb, 'Customers');
+  assert.deepEqual(result.columns.find((col) => col.letter === 'D').sample_values, Array(5).fill('Pre-2023'));
+  let state = { ...detectedState(), columns: result.columns, detectedAttributes: result.attribute_cols };
+  state = wizardReducer(state, { type: 'SET_CUSTOMER_NAME_COL', col: 'D' });
+  state = wizardReducer(state, { type: 'SET_CUSTOMER_NAME_COL', col: 'A' });
+  assert.deepEqual(state.detectedAttributes.map((attr) => attr.letter), ['C', 'D']);
+});
+
+test('remapping preserves identifier labels recovered from a separate date-header row', () => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Customers');
+  ws.addRow(['Customer Name', null, 'Segment', null, new Date(2023, 0, 31), new Date(2023, 1, 28), new Date(2023, 2, 31)]);
+  for (let i = 0; i < 50; i++) ws.addRow([1000 + i, null, 'SMB', 'Pre-2023', 500.5, 600.5, 700.5]);
+  const result = detectTableColumns(wb, 'Customers');
+  assert.equal(result.header_row, 1);
+  assert.equal(result.columns.find((col) => col.letter === 'C').header, 'Segment');
+  let state = { ...detectedState(), columns: result.columns, dateColumns: result.date_columns, detectedAttributes: result.attribute_cols };
+  state = wizardReducer(state, { type: 'SET_CUSTOMER_NAME_COL', col: 'C' });
+  state = wizardReducer(state, { type: 'SET_CUSTOMER_NAME_COL', col: 'A' });
+  assert.equal(state.detectedAttributes.find((attr) => attr.letter === 'C').header, 'Segment');
 });
 
 test('raw-data mapping changes release former roles and exclude current date, customer and revenue roles', () => {

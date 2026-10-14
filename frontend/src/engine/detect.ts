@@ -665,10 +665,13 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
   // Customer IDs can be numeric or text; pick the highest-cardinality column.
   let customerIdCol: string | null = null;
   let bestCardinality = -1;
+  let bestTextRatio = -1;
   for (const h of nonDateCols) {
     const s = colStats[h.col_num];
-    if (s.unique_count > bestCardinality) {
+    if (s.unique_count > bestCardinality ||
+      (s.unique_count === bestCardinality && s.str_ratio > bestTextRatio)) {
       bestCardinality = s.unique_count;
+      bestTextRatio = s.str_ratio;
       customerIdCol = h.letter;
     }
   }
@@ -716,9 +719,10 @@ export function detectTableColumns(wb: Workbook, sheetName: string): DetectTable
   const columnInfo: ColumnInfo[] = headers.map(h => {
     const samples: string[] = [];
     if (colSamples[h.col_num]) {
-      samples.push(...colSamples[h.col_num].slice(0, 5).filter(v => v != null).map(v => String(v)));
+      samples.push(...colSamples[h.col_num].filter(v => v != null && String(v).trim() !== '').slice(0, 5).map(v => String(v)));
     }
-    return { letter: h.letter, header: h.header, sample_values: samples };
+    const recoveredHeader = nonDateCols.find(col => col.letter === h.letter)?.header;
+    return { letter: h.letter, header: recoveredHeader || h.header, sample_values: samples };
   });
 
   return {
